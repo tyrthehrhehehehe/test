@@ -1,4357 +1,2925 @@
---[[
-	WARNING: Heads up! This script has not been verified by ScriptBlox. Use at your own risk!
-]]
-if not game:IsLoaded() then
-    game.Loaded:Wait()
+-- ============================================================
+--  CattStar Sailor-Piece | WindUI Version
+--  Merged from: CattStar script (WindUI) + FourHub script
+--  UI Library: WindUI (Footagesus)
+-- ============================================================
+
+-- Prevent double-run
+if getgenv().SailorPiece_Running then
+    warn("Script already running!")
+    return
+end
+getgenv().SailorPiece_Running = true
+
+repeat task.wait() until game:IsLoaded()
+
+-- ============================================================
+--  SERVICES & LOCALS
+-- ============================================================
+do
+    player              = game.Players.LocalPlayer
+    playerName          = player.Name
+    char                = player.Character
+    playerDisplayName   = player.DisplayName
+    replicated          = game:GetService("ReplicatedStorage")
+    TweenService        = game:GetService("TweenService")
+    HttpService         = game:GetService("HttpService")
+    TeleportService     = game:GetService("TeleportService")
+    PlaceId             = game.PlaceId
+    RunService          = game:GetService("RunService")
+    Lighting            = game:GetService("Lighting")
+    Terrain             = workspace:FindFirstChildOfClass("Terrain")
+    vu                  = game:GetService("VirtualUser")
+    vim1                = game:GetService("VirtualInputManager")
+    Players             = game:GetService("Players")
+    UIS                 = game:GetService("UserInputService")
+    GuiService          = game:GetService("GuiService")
+    PGui                = player:WaitForChild("PlayerGui")
 end
 
-game:GetService("GuiService"):ClearError()
+-- ============================================================
+--  MOB DATA
+-- ============================================================
+local mobs = {
+    { isBoss=false, island="Starter",  title="Thief Hunter (Lv.0)",             amount=5, id="thief_hunt_1",            recommendedLevel=0,    questNPC="QuestNPC1",  npcType="Thief" },
+    { isBoss=true,  island="Starter",  title="Thief Boss (Lv.100)",              amount=1, id="boss_hunt_1",             recommendedLevel=100,  questNPC="QuestNPC2",  npcType="ThiefBoss" },
+    { isBoss=false, island="Jungle",   title="Monkey Hunter (Lv.250)",           amount=5, id="monkey_hunt_1",           recommendedLevel=250,  questNPC="QuestNPC3",  npcType="Monkey" },
+    { isBoss=true,  island="Jungle",   title="Monkey Boss (Lv.500)",             amount=1, id="monkey_hunt_2",           recommendedLevel=500,  questNPC="QuestNPC4",  npcType="MonkeyBoss" },
+    { isBoss=false, island="Desert",   title="Desert Bandit Hunter (Lv.750)",    amount=5, id="desert_hunt_1",           recommendedLevel=750,  questNPC="QuestNPC5",  npcType="DesertBandit" },
+    { isBoss=true,  island="Desert",   title="Desert Bandit Boss (Lv.1000)",     amount=1, id="desert_hunt_2",           recommendedLevel=1000, questNPC="QuestNPC6",  npcType="DesertBoss" },
+    { isBoss=false, island="Snow",     title="Frost Rogue Hunter (Lv.1500)",     amount=5, id="snow_hunt_1",             recommendedLevel=1500, questNPC="QuestNPC7",  npcType="FrostRogue" },
+    { isBoss=true,  island="Snow",     title="Winter Warden Boss (Lv.2000)",     amount=1, id="snow_hunt_2",             recommendedLevel=2000, questNPC="QuestNPC8",  npcType="SnowBoss" },
+    { isBoss=false, island="Shibuya",  title="Sorcerer Hunter (Lv.3000)",        amount=5, id="jjk_hunt_1",              recommendedLevel=3000, questNPC="QuestNPC9",  npcType="Sorcerer" },
+    { isBoss=true,  island="Shibuya",  title="Panda Sorcerer Boss (Lv.4000)",    amount=1, id="jjk_hunt_2",              recommendedLevel=4000, questNPC="QuestNPC10", npcType="PandaMiniBoss" },
+    { isBoss=false, island="Hollow",   title="Hollow Hunter (Lv.5000)",          amount=5, id="hollow_hunt_1",           recommendedLevel=5000, questNPC="QuestNPC11", npcType="Hollow" },
+    { isBoss=false, island="Shinjuku", title="Strong Sorcerer Hunter (Lv.6000)", amount=5, id="strong_sorcerer_hunt_1",  recommendedLevel=6000, questNPC="QuestNPC12", npcType="StrongSorcerer" },
+    { isBoss=false, island="Shinjuku", title="Curse Hunter (Lv.7000)",           amount=5, id="curse_hunt_1",            recommendedLevel=7000, questNPC="QuestNPC13", npcType="Curse" },
+    { isBoss=false, island="Slime",    title="Slime Warrior Hunter (Lv.8000)",   amount=5, id="slime_warrior_hunt_1",    recommendedLevel=8000, questNPC="QuestNPC14", npcType="SlimeWarrior" },
+    { isBoss=false, island="Academy",  title="Academy Challenge (Lv.9000)",      amount=5, id="academy_teacher_hunt_1",  recommendedLevel=9000, questNPC="QuestNPC15", npcType="AcademyTeacher" },
+}
 
-local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/ionlyusegithubformcmods/1-Line-Scripts/main/Mobile%20Friendly%20Orion')))()
+TeleportLocations = {
+    { Name="Starter",  Display="Starter",  Portal="Starter" },
+    { Name="Jungle",   Display="Jungle",   Portal="Jungle" },
+    { Name="Desert",   Display="Desert",   Portal="Desert" },
+    { Name="Snow",     Display="Snow",     Portal="Snow" },
+    { Name="Sailor",   Display="Sailor",   Portal="Sailor" },
+    { Name="Shibuya",  Display="Shibuya",  Portal="Shibuya" },
+    { Name="Hollow",   Display="Hollow",   Portal="HollowIsland" },
+    { Name="Boss",     Display="Boss",     Portal="Boss" },
+    { Name="Dungeon",  Display="Dungeon",  Portal="Dungeon" },
+    { Name="Shinjuku", Display="Shinjuku", Portal="Shinjuku" },
+    { Name="Slime",    Display="Slime",    Portal="Slime" },
+    { Name="Academy",  Display="Academy",  Portal="Academy" },
+    { Name="Valentine",Display="Valentine",Portal="Valentine" },
+    { Name="HuecoMundo",Display="HuecoMundo",Portal="HuecoMundo" },
+    { Name="Judgement",Display="Judgement",Portal="Judgement" },
+    { Name="Tower",    Display="Tower",    Portal="TowerIsland" },
+}
 
-if game.PlaceId == 11520107397 or game.PlaceId == 6403373529 or game.PlaceId == 9015014224 then
-local bypass;
-    bypass = hookmetamethod(game, "__namecall", function(method, ...) 
-        if getnamecallmethod() == "FireServer" and method == game.ReplicatedStorage.Ban then
-            return
-        elseif getnamecallmethod() == "FireServer" and method == game.ReplicatedStorage.AdminGUI then
-            return
-        elseif getnamecallmethod() == "FireServer" and method == game.ReplicatedStorage.WalkSpeedChanged then
-            return
-        end
-        return bypass(method, ...)
-    end)
-if workspace:FindFirstChild("Spot") == nil then
-local SafeSpot = Instance.new("Part", workspace)
-SafeSpot.Position = Vector3.new(math.random(-25000,-2500),500,math.random(-25000,-2500))
-SafeSpot.Name = "Spot"
-SafeSpot.Size = Vector3.new(500,50,500)
-SafeSpot.Anchored = true
-SafeSpot.Transparency = .5
-end
-if workspace:FindFirstChild("TAntiVoid") == nil then
-local TournamentAntiVoid = Instance.new("Part", workspace)
-TournamentAntiVoid.Name = "TAntiVoid"
-TournamentAntiVoid.Size = Vector3.new(2048, 15, 2048)
-TournamentAntiVoid.Position = Vector3.new(3420, 70, 3)
-TournamentAntiVoid.CanCollide = false
-TournamentAntiVoid.Transparency = 1
-TournamentAntiVoid.Anchored = true
-end
-end
+-- ============================================================
+--  SUPPORT DETECTION
+-- ============================================================
+local Support = {
+    Webhook    = (typeof(request)            == "function" or typeof(http_request) == "function"),
+    Clipboard  = (typeof(setclipboard)       == "function"),
+    FileIO     = (typeof(writefile)          == "function" and typeof(isfile) == "function"),
+    Proximity  = (typeof(fireproximityprompt)== "function"),
+    FPS        = (typeof(setfpscap)          == "function"),
+    Connections= (typeof(getconnections)     == "function" or typeof(get_signal_cons) == "function"),
+}
 
-if game.PlaceId == 9431156611 then
-local bypass;
-    bypass = hookmetamethod(game, "__namecall", function(method, ...) 
-        if getnamecallmethod() == "FireServer" and method == game.ReplicatedStorage.Events.Ban then
-            return
-        elseif getnamecallmethod() == "FireServer" and method == game.ReplicatedStorage.Events.AdminGUI then
-            return
-        elseif getnamecallmethod() == "FireServer" and method == game.ReplicatedStorage.Events.WS then
-            return
-        elseif getnamecallmethod() == "FireServer" and method == game.ReplicatedStorage.Events.WS2 then
-            return
-        end
-        return bypass(method, ...)
-    end)
-
-local AntiLava = Instance.new("Part", workspace)
-AntiLava.Name = "AntiLava"
-AntiLava.Position = Vector3.new(-238, -43, 401)
-AntiLava.Size = Vector3.new(150,30,150)
-AntiLava.Anchored = true
-AntiLava.Transparency = 1
-AntiLava.CanCollide = false
-
-local AntiAcid = Instance.new("Part", workspace)
-AntiAcid.Position = Vector3.new(-70, -20, -725)
-AntiAcid.Name = "AntiAcid"
-AntiAcid.Size = Vector3.new(155, 35, 144)
-AntiAcid.Anchored = true
-AntiAcid.Transparency = 1
-AntiLava.CanCollide = false
-                
-                local Window = OrionLib:MakeWindow({Name = "Slap Battles hub that exists | Slap Royale", HidePremium = true, IntroEnabled = false, SaveConfig = false, ConfigFolder = "OrionTest"})
-
-                local Tab = Window:MakeTab({
-                    Name = "Home",
-                    Icon = "http://www.roblox.com/asset/?id=4370345144",
-                    PremiumOnly = false
-                })
-
-                local Tab2 = Window:MakeTab({
-                    Name = "Combat",
-                    Icon = "http://www.roblox.com/asset/?id=7733674079",
-                    PremiumOnly = false
-                })
-
-                local Tab3 = Window:MakeTab({
-                    Name = "Antis",
-                    Icon = "http://www.roblox.com/asset/?id=7734056608",
-                    PremiumOnly = false
-                })
- 
-                local Tab4 = Window:MakeTab({
-                    Name = "Misc",
-                    Icon = "http://www.roblox.com/asset/?id=4370318685",
-                    PremiumOnly = false
-                })
-
-                local Tab5 = Window:MakeTab({
-                    Name = "Player",
-                    Icon = "http://www.roblox.com/asset/?id=4335489011",
-                    PremiumOnly = false
-                })
-
-Tab:AddLabel("Message Guy that exists#1915 if you have issues")
-
-Tab:AddButton({
-	Name = "Infinite Yield",
-	Callback = function()
-      		loadstring(game:HttpGet('https://raw.githubusercontent.com/ionlyusegithubformcmods/1-Line-Scripts/main/Infinite%20Yield%20but%20with%20secure%20dex'))()
-  	end    
-})
-
-Tab:AddButton({
-	Name = "Destroy GUI",
-	Callback = function()
-      		OrionLib:Destroy()
-  	end    
-})
-
-Tab3:AddToggle({
-	Name = "Anti Acid",
-	Default = false,
-	Callback = function(Value)
-AntiAcid.CanCollide = Value
-	end    
-})
-
-Tab3:AddToggle({
-	Name = "Anti Lava",
-	Default = false,
-	Callback = function(Value)
-AntiLava.CanCollide = Value
-	end    
-})
-
-Tab3:AddToggle({
-                    Name = "Anti Record (Detects chat msgs)",
-                    Default = false,
-                    Callback = function(Value)
-AntiRecord = Value
-end
-})
-for i,p in pairs(game.Players:GetChildren()) do
-if p ~= game.Players.LocalPlayer then
-p.Chatted:Connect(function(message)
-Words = message:split(" ")
-if AntiRecord == true then
-for i, v in pairs(Words) do
-if v:lower():match("recording") or v:lower():match(" rec") or v:lower():match("record") or v:lower():match("discor") or v:lower():match(" disco") or v:lower():match(" disc") or v:lower():match("ticket") or v:lower():match("tickets") or v:lower():match(" ds") or v:lower():match(" dc") or v:lower():match("dizzy") or v:lower():match("dizzycord") or v:lower():match(" clip") or v:lower():match("proof") or v:lower():match("evidence") then
-AK:Set(false)
-game.Players.LocalPlayer:Kick("Possible player recording detected.".." ("..p.Name..")".." ("..message..")")
-end
-end
-end
-end)
-end
-end
-game.Players.PlayerAdded:Connect(function(Player)
-Player.Chatted:Connect(function(message)
-Words = message:split(" ")
-if AntiRecord == true then
-for i, v in pairs(Words) do
-if v:lower():match("recording") or v:lower():match(" rec") or v:lower():match("record") or v:lower():match("discor") or v:lower():match(" disco") or v:lower():match(" disc") or v:lower():match("ticket") or v:lower():match("tickets") or v:lower():match(" ds") or v:lower():match(" dc") or v:lower():match("dizzy") or v:lower():match("dizzycord") or v:lower():match(" clip") or v:lower():match("proof") or v:lower():match("evidence") then
-AK:Set(false)
-game.Players.LocalPlayer:Kick("Possible player recording detected.".." ("..Player.Name..")".." ("..message..")")
-end
-end
-end
-end)
-end)
-
-Tab2:AddToggle({
-                    Name = "Slap Aura",
-                    Default = false,
-                    Callback = function(Value)
-SlapAura = Value
-                while SlapAura do
-for i,v in pairs(game.Players:GetChildren()) do
-                    if v ~= game.Players.LocalPlayer and v.Character then
-if v.Character:FindFirstChild("Dead") == nil and v.Character:FindFirstChild("HumanoidRootPart") then
-Magnitude = (game.Players.LocalPlayer.Character.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).Magnitude
-                        if 25 >= Magnitude then
-game.ReplicatedStorage.Events.Slap:FireServer(v.Character:WaitForChild("HumanoidRootPart"))
-                    end
-end
-end
-                end
-task.wait()
-end
-end
-                })
-
-GAI = Tab2:AddToggle({
-                    Name = "Get all items (Use after bus spawns)",
-                    Default = false,
-                    Callback = function(Value)
-GetAllItems = Value
-if game.Players.LocalPlayer.Character:WaitForChild("inMatch").Value == true then
-                while GetAllItems do
-            for i, v in ipairs(game.Workspace:GetChildren()) do
-                if v.ClassName == "Tool" then
- game.Players.LocalPlayer.Character.Humanoid:EquipTool(v)
-                end
-            end
-repeat task.wait() until game.Workspace:FindFirstChildWhichIsA("Tool") == nil
-game.Players.LocalPlayer.Character.Humanoid:UnequipTools()
-task.wait()
-end
-elseif GetAllItems == true then
-OrionLib:MakeNotification({Name = "Error",Content = "Match hasn't started yet.",Image = "rbxassetid://7733658504",Time = 5})
-wait(0.05)
-GAI:Set(false)
-end
-end
-                })
-
-Tab2:AddButton({
-	Name = "Bomb Bus (Use in the lobby)",
-	Callback = function()
-repeat task.wait()
-until game.Players.LocalPlayer.Backpack:FindFirstChild("Bomb")
-            for i, v in ipairs(game.Players.LocalPlayer.Backpack:GetChildren()) do
-                if v.Name == "Bomb" then
-                    game.Players.LocalPlayer.Character.Humanoid:EquipTool(v)
-                    v:Activate()
-                end
-            end
-			end
-})
-
-Tab2:AddButton({
-	Name = "Leave bus early",
-	Callback = function()
-game:GetService("ReplicatedStorage").Events.BusJumping:FireServer()
-repeat task.wait()
-until game.Players.LocalPlayer.PlayerGui:FindFirstChild("JumpPrompt")
-game.Players.LocalPlayer.PlayerGui.JumpPrompt:Destroy()
-			end
-})
-
-Tab2:AddButton({
-	Name = "Inf 250 power (Needs 2 True Powers) (Use before other items)",
-	Callback = function()
-for i = 1, 2 do
-game.Players.LocalPlayer.Character.Humanoid:EquipTool(game.Players.LocalPlayer.Backpack["True Power"])
-game.Players.LocalPlayer.Character["True Power"]:Activate()
-end
-                    end    	
-                })
-
-Tab2:AddButton({
-	Name = "Use permanent items",
-	Callback = function()
-for i,v in pairs(game.Players.LocalPlayer.Backpack:GetChildren()) do
-                    if v.Name == "Bull's essence" or v.Name == "Potion of Strength" or v.Name == "Boba" or v.Name == "Speed Potion" or v.Name == "Frog Potion" or v.Name == "Strength Brew" or v.Name == "Frog Brew" or v.Name == "Speed Brew" then
-                        game.Players.LocalPlayer.Character.Humanoid:EquipTool(v)
-                        v:Activate()
-                    end
-                end
-			end
-})
-
-Tab2:AddToggle({
-                    Name = "Glove ESP",
-                    Default = false,
-                    Callback = function(Value)
-GloveESP = Value
-if GloveESP == false then
-for i, v in ipairs(game.Players:GetChildren()) do
-                if v.Character and v.Character:FindFirstChild("Head") and v.Character.Head:FindFirstChild("GloveEsp") then
- v.Character.Head.GloveEsp:Destroy()
-                end
-            end
-end
-while GloveESP do
-for i, v in ipairs(game.Players:GetChildren()) do
-                if v ~= game.Players.LocalPlayer and v.Character and v.Character:FindFirstChild("Head") and v.Character.inMatch.Value == true and v.Character.Head:FindFirstChild("GloveEsp") == nil then
-GloveEsp = Instance.new("BillboardGui", v.Character.Head)
-GloveEsp.Adornee = v.Character.Head
-GloveEsp.Name = "GloveEsp"
-GloveEsp.Size = UDim2.new(0, 100, 0, 150)
-GloveEsp.StudsOffset = Vector3.new(0, 1, 0)
-GloveEsp.AlwaysOnTop = true
-GloveEsp.StudsOffset = Vector3.new(0, 3, 0)
-GloveEspText = Instance.new("TextLabel", GloveEsp)
-GloveEspText.BackgroundTransparency = 1
-GloveEspText.Size = UDim2.new(0, 100, 0, 100)
-GloveEspText.TextSize = 25
-GloveEspText.Font = Enum.Font.SourceSansSemibold
-GloveEspText.TextColor3 = Color3.new(255, 255, 255)
-GloveEspText.TextStrokeTransparency = 0
-GloveEspText.Text = v.Glove.Value
-                end
-            end
-task.wait()
-end
-end
-                })
-
-Tab4:AddButton({
-	Name = "Get Lab Code",
-	Callback = function()
-if game.Workspace.Map.CodeBrick.SurfaceGui:FindFirstChild("IMGTemplate") then
-game.Workspace.Map.CodeBrick.SurfaceGui.IMGTemplate.Name = "1st"
-game.Workspace.Map.CodeBrick.SurfaceGui.IMGTemplate.Name = "2nd"
-game.Workspace.Map.CodeBrick.SurfaceGui.IMGTemplate.Name = "3rd"
-game.Workspace.Map.CodeBrick.SurfaceGui.IMGTemplate.Name = "4th"
-end
-for i,v in pairs(game.Workspace.Map.CodeBrick.SurfaceGui:GetChildren()) do
-                    if v.Name == "1st" then
-                        if v.Image == "http://www.roblox.com/asset/?id=9648769161" then
-                    first = "4"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648765536" then
-                    first = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648762863" then
-                    first = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648759883" then
-                    first = "9"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648755440" then
-                    first = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648752438" then
-                    first = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648749145" then
-                    first = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648745618" then
-                    first = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648742013" then
-                    first = "7"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648738553" then
-                    first = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648734698" then
-                    first = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648730082" then
-                    first = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648723237" then
-                    first = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648718450" then
-                    first = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648715920" then
-                    first = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648712563" then
-                    first = "2"
-                end
-                    end
-                end
-for i,v in pairs(game.Workspace.Map.CodeBrick.SurfaceGui:GetChildren()) do
-                    if v.Name == "2nd" then
-                        if v.Image == "http://www.roblox.com/asset/?id=9648769161" then
-                    second = "4"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648765536" then
-                    second = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648762863" then
-                    second = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648759883" then
-                    second = "9"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648755440" then
-                    second = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648752438" then
-                    second = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648749145" then
-                    second = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648745618" then
-                    second = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648742013" then
-                    second = "7"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648738553" then
-                    second = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648734698" then
-                    second = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648730082" then
-                    second = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648723237" then
-                    second = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648718450" then
-                    second = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648715920" then
-                    second = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648712563" then
-                    second = "2"
-                end
-                    end
-                end
-for i,v in pairs(game.Workspace.Map.CodeBrick.SurfaceGui:GetChildren()) do
-                    if v.Name == "3rd" then
-                        if v.Image == "http://www.roblox.com/asset/?id=9648769161" then
-                    third = "4"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648765536" then
-                    third = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648762863" then
-                    third = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648759883" then
-                    third = "9"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648755440" then
-                    third = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648752438" then
-                    third = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648749145" then
-                    third = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648745618" then
-                    third = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648742013" then
-                    third = "7"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648738553" then
-                    third = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648734698" then
-                    third = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648730082" then
-                    third = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648723237" then
-                    third = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648718450" then
-                    third = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648715920" then
-                    third = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648712563" then
-                    third = "2"
-                end
-                    end
-                end
-for i,v in pairs(game.Workspace.Map.CodeBrick.SurfaceGui:GetChildren()) do
-                    if v.Name == "4th" then
-                        if v.Image == "http://www.roblox.com/asset/?id=9648769161" then
-                    fourth = "4"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648765536" then
-                    fourth = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648762863" then
-                    fourth = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648759883" then
-                    fourth = "9"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648755440" then
-                    fourth = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648752438" then
-                    fourth = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648749145" then
-                    fourth = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648745618" then
-                    fourth = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648742013" then
-                    fourth = "7"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648738553" then
-                    fourth = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648734698" then
-                    fourth = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648730082" then
-                    fourth = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648723237" then
-                    fourth = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648718450" then
-                    fourth = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648715920" then
-                    fourth = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648712563" then
-                    fourth = "2"
-                end
-                    end
-                end
-Code = first..second..third..fourth
-OrionLib:MakeNotification({Name = Code,Content = "",Image = "rbxassetid://7733919105",Time = 5})
-                    end    
-                })
-
-Tab4:AddButton({
-	Name = "Get Chain",
-	Callback = function()
-if game.Workspace.Map.CodeBrick.SurfaceGui:FindFirstChild("IMGTemplate") then
-game.Workspace.Map.CodeBrick.SurfaceGui.IMGTemplate.Name = "1st"
-game.Workspace.Map.CodeBrick.SurfaceGui.IMGTemplate.Name = "2nd"
-game.Workspace.Map.CodeBrick.SurfaceGui.IMGTemplate.Name = "3rd"
-game.Workspace.Map.CodeBrick.SurfaceGui.IMGTemplate.Name = "4th"
-end
-for i,v in pairs(game.Workspace.Map.CodeBrick.SurfaceGui:GetChildren()) do
-                    if v.Name == "1st" then
-                        if v.Image == "http://www.roblox.com/asset/?id=9648769161" then
-                    first = "4"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648765536" then
-                    first = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648762863" then
-                    first = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648759883" then
-                    first = "9"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648755440" then
-                    first = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648752438" then
-                    first = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648749145" then
-                    first = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648745618" then
-                    first = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648742013" then
-                    first = "7"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648738553" then
-                    first = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648734698" then
-                    first = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648730082" then
-                    first = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648723237" then
-                    first = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648718450" then
-                    first = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648715920" then
-                    first = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648712563" then
-                    first = "2"
-                end
-                    end
-                end
-for i,v in pairs(game.Workspace.Map.CodeBrick.SurfaceGui:GetChildren()) do
-                    if v.Name == "2nd" then
-                        if v.Image == "http://www.roblox.com/asset/?id=9648769161" then
-                    second = "4"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648765536" then
-                    second = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648762863" then
-                    second = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648759883" then
-                    second = "9"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648755440" then
-                    second = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648752438" then
-                    second = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648749145" then
-                    second = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648745618" then
-                    second = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648742013" then
-                    second = "7"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648738553" then
-                    second = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648734698" then
-                    second = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648730082" then
-                    second = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648723237" then
-                    second = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648718450" then
-                    second = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648715920" then
-                    second = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648712563" then
-                    second = "2"
-                end
-                    end
-                end
-for i,v in pairs(game.Workspace.Map.CodeBrick.SurfaceGui:GetChildren()) do
-                    if v.Name == "3rd" then
-                        if v.Image == "http://www.roblox.com/asset/?id=9648769161" then
-                    third = "4"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648765536" then
-                    third = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648762863" then
-                    third = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648759883" then
-                    third = "9"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648755440" then
-                    third = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648752438" then
-                    third = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648749145" then
-                    third = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648745618" then
-                    third = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648742013" then
-                    third = "7"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648738553" then
-                    third = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648734698" then
-                    third = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648730082" then
-                    third = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648723237" then
-                    third = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648718450" then
-                    third = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648715920" then
-                    third = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648712563" then
-                    third = "2"
-                end
-                    end
-                end
-for i,v in pairs(game.Workspace.Map.CodeBrick.SurfaceGui:GetChildren()) do
-                    if v.Name == "4th" then
-                        if v.Image == "http://www.roblox.com/asset/?id=9648769161" then
-                    fourth = "4"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648765536" then
-                    fourth = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648762863" then
-                    fourth = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648759883" then
-                    fourth = "9"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648755440" then
-                    fourth = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648752438" then
-                    fourth = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648749145" then
-                    fourth = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648745618" then
-                    fourth = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648742013" then
-                    fourth = "7"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648738553" then
-                    fourth = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648734698" then
-                    fourth = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648730082" then
-                    fourth = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648723237" then
-                    fourth = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648718450" then
-                    fourth = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648715920" then
-                    fourth = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648712563" then
-                    fourth = "2"
-                end
-                    end
-                end
-fireclickdetector(game.Workspace.Map.OriginOffice.Door.Keypad.Buttons.Reset.ClickDetector)
-wait(0.25)
-fireclickdetector(game.Workspace.Map.OriginOffice.Door.Keypad.Buttons[first].ClickDetector)
-wait(0.25)
-fireclickdetector(game.Workspace.Map.OriginOffice.Door.Keypad.Buttons[second].ClickDetector)
-wait(0.25)
-fireclickdetector(game.Workspace.Map.OriginOffice.Door.Keypad.Buttons[third].ClickDetector)
-wait(0.25)
-fireclickdetector(game.Workspace.Map.OriginOffice.Door.Keypad.Buttons[fourth].ClickDetector)
-wait(0.25)
-fireclickdetector(game.Workspace.Map.OriginOffice.Door.Keypad.Buttons.Enter.ClickDetector)
-                    end    
-                })
-
-Tab4:AddToggle({
-                    Name = "Remove Zone Color",
-                    Default = false,
-                    Callback = function(Value)
-RemoveZone = Value
-game.Players.LocalPlayer.Character:WaitForChild("inZone").Changed:Connect(function()
-if RemoveZone then
-game.Players.LocalPlayer.Character:WaitForChild("inZone").Value = false
-end
-end)
-end
-                })
-
-Tab4:AddButton({
-	Name = "Free Emotes (Type /e emotename)",
-	Callback = function()
-Floss = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Floss, game.Players.LocalPlayer.Character.Humanoid)
-Groove = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Groove, game.Players.LocalPlayer.Character.Humanoid)
-Headless = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Headless, game.Players.LocalPlayer.Character.Humanoid)
-Helicopter = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Helicopter, game.Players.LocalPlayer.Character.Humanoid)
-Kick = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Kick, game.Players.LocalPlayer.Character.Humanoid)
-L = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.L, game.Players.LocalPlayer.Character.Humanoid)
-Laugh = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Laugh, game.Players.LocalPlayer.Character.Humanoid)
-Parker = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Parker, game.Players.LocalPlayer.Character.Humanoid)
-Spasm = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Spasm, game.Players.LocalPlayer.Character.Humanoid)
-Thriller = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Thriller, game.Players.LocalPlayer.Character.Humanoid)
-game.Players.LocalPlayer.Chatted:connect(function(msg)
-if game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-Floss = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Floss, game.Players.LocalPlayer.Character.Humanoid)
-Groove = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Groove, game.Players.LocalPlayer.Character.Humanoid)
-Headless = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Headless, game.Players.LocalPlayer.Character.Humanoid)
-Helicopter = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Helicopter, game.Players.LocalPlayer.Character.Humanoid)
-Kick = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Kick, game.Players.LocalPlayer.Character.Humanoid)
-L = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.L, game.Players.LocalPlayer.Character.Humanoid)
-Laugh = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Laugh, game.Players.LocalPlayer.Character.Humanoid)
-Parker = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Parker, game.Players.LocalPlayer.Character.Humanoid)
-Spasm = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Spasm, game.Players.LocalPlayer.Character.Humanoid)
-Thriller = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Thriller, game.Players.LocalPlayer.Character.Humanoid)
-if string.lower(msg) == "/e floss" then
-Floss:Play()
-elseif string.lower(msg) == "/e groove" then
-Groove:Play()
-elseif string.lower(msg) == "/e headless" then
-Headless:Play()
-elseif string.lower(msg) == "/e helicopter" then
-Helicopter:Play()
-elseif string.lower(msg) == "/e kick" then
-Kick:Play()
-elseif string.lower(msg) == "/e l" then
-L:Play()
-elseif string.lower(msg) == "/e laugh" then
-Laugh:Play()
-elseif string.lower(msg) == "/e parker" then
-Parker:Play()
-elseif string.lower(msg) == "/e spasm" then
-Spasm:Play()
-elseif string.lower(msg) == "/e thriller" then
-Thriller:Play()
-end
-EP = game.Players.LocalPlayer.Character.HumanoidRootPart.Position
-end
-end)
-game:GetService("RunService").Heartbeat:Connect(function()
-if EP ~= nil and game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and Floss.IsPlaying or Groove.IsPlaying or Headless.IsPlaying or Helicopter.IsPlaying or Kick.IsPlaying or L.IsPlaying or Laugh.IsPlaying or Parker.IsPlaying or Spasm.IsPlaying or Thriller.IsPlaying then
-Magnitude = (game.Players.LocalPlayer.Character.HumanoidRootPart.Position - EP).Magnitude
-if Magnitude > 1 then
-Floss:Stop(); Groove:Stop(); Headless:Stop(); Helicopter:Stop(); Kick:Stop(); L:Stop(); Laugh:Stop(); Parker:Stop(); Spasm:Stop(); Thriller:Stop()
-end
-end
-end)
-                    end    
-                })
-
-Tab5:AddSlider({
-	Name = "Walkspeed",
-	Min = 20,
-	Max = 1000,
-	Default = 20,
-	Color = Color3.fromRGB(140, 185, 255),
-	Increment = 1,
-	ValueName = "WS",
-	Callback = function(Value)
-		game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = Value
-Walkspeed = Value
-	end    
-})
-
-Tab5:AddToggle({
-	Name = "Keep Walkspeed",
-	Default = false,
-	Callback = function(Value)
-KeepWalkspeed = Value
-            while KeepWalkspeed do
-                if game.Players.LocalPlayer.Character:FindFirstChild("Humanoid") ~= nil and game.Players.LocalPlayer.Character.Humanoid.WalkSpeed ~= Walkspeed then
-                    game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = Walkspeed
-                end
-task.wait()
-            end
-	end    
-})
-
-Tab5:AddSlider({
-	Name = "Jumppower",
-	Min = 50,
-	Max = 1000,
-	Default = 50,
-	Color = Color3.fromRGB(255, 185, 140),
-	Increment = 1,
-	ValueName = "JP",
-	Callback = function(Value)
-		game.Players.LocalPlayer.Character.Humanoid.JumpPower = Value
-Jumppower = Value
-	end    
-})
-
-Tab5:AddToggle({
-	Name = "Keep Jumppower",
-	Default = false,
-	Callback = function(Value)
-KeepJumppower = Value
-            while KeepJumppower do
-                if game.Players.LocalPlayer.Character:FindFirstChild("Humanoid") ~= nil and game.Players.LocalPlayer.Character.Humanoid.WalkSpeed ~= Jumppower then
-                    game.Players.LocalPlayer.Character.Humanoid.JumpPower = Jumppower
-                end
-task.wait()
-            end
-	end    
-})
-
-elseif game.PlaceId == 11520107397 then
-                
-                local Window = OrionLib:MakeWindow({Name = "Slap Battles hub that exists | Killstreak Only", HidePremium = true, IntroEnabled = false, SaveConfig = false, ConfigFolder = "OrionTest"})
-
-                local Tab = Window:MakeTab({
-                    Name = "Home",
-                    Icon = "http://www.roblox.com/asset/?id=4370345144",
-                    PremiumOnly = false
-                })
-
-                local Tab2 = Window:MakeTab({
-                    Name = "Combat",
-                    Icon = "http://www.roblox.com/asset/?id=7733674079",
-                    PremiumOnly = false
-                })
-
-                local Tab3 = Window:MakeTab({
-                    Name = "Antis",
-                    Icon = "http://www.roblox.com/asset/?id=7734056608",
-                    PremiumOnly = false
-                })
- 
-                local Tab4 = Window:MakeTab({
-                    Name = "Misc",
-                    Icon = "http://www.roblox.com/asset/?id=4370318685",
-                    PremiumOnly = false
-                })
-
-                local Tab5 = Window:MakeTab({
-                    Name = "Badges",
-                    Icon = "http://www.roblox.com/asset/?id=7733673987",
-                    PremiumOnly = false
-                })
-
-                local Tab6 = Window:MakeTab({
-                    Name = "Player",
-                    Icon = "http://www.roblox.com/asset/?id=4335489011",
-                    PremiumOnly = false
-                })
-
-Tab:AddLabel("Message Guy that exists#1915 if you have issues")
-
-Tab:AddButton({
-	Name = "Infinite Yield",
-	Callback = function()
-      		loadstring(game:HttpGet('https://raw.githubusercontent.com/ionlyusegithubformcmods/1-Line-Scripts/main/Infinite%20Yield%20but%20with%20secure%20dex'))()
-  	end    
-})
-
-Tab:AddButton({
-	Name = "Rejoin Server",
-	Callback = function()
-      		game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, game.JobId, game.Players.LocalPlayer)
-  	end    
-})
-
-Tab:AddButton({
-	Name = "Destroy GUI",
-	Callback = function()
-      		OrionLib:Destroy()
-  	end    
-})
-
-Tab4:AddButton({
-	Name = "View Testing Server (Good for glove leaking)",
-	Callback = function()
-local teleportFunc = queueonteleport or queue_on_teleport or syn and syn.queue_on_teleport
-if teleportFunc then
-    teleportFunc([[
-        if not game:IsLoaded() then
-            game.Loaded:Wait()
-        end
-        repeat wait() until game.Players.LocalPlayer
-        game:GetService("RunService").RenderStepped:Connect(function()
-            game:GetService("GuiService"):ClearError()
-game.CoreGui:WaitForChild("RobloxLoadingGUI"):Destroy()
-        end)
-loadstring(game:HttpGet(("https://raw.githubusercontent.com/ionlyusegithubformcmods/1-Line-Scripts/main/Slap%20Battles")))()
-    ]])
-end
-game:GetService("TeleportService"):Teleport(9020359053)
-                    end    
-                })
-
-Tab4:AddButton({
-	Name = "View Slap Royale Testing Server",
-	Callback = function()
-local teleportFunc = queueonteleport or queue_on_teleport or syn and syn.queue_on_teleport
-if teleportFunc then
-    teleportFunc([[
-        if not game:IsLoaded() then
-            game.Loaded:Wait()
-        end
-        repeat wait() until game.Players.LocalPlayer
-        game:GetService("RunService").RenderStepped:Connect(function()
-            game:GetService("GuiService"):ClearError()
-game.CoreGui:WaitForChild("RobloxLoadingGUI"):Destroy()
-        end)
-loadstring(game:HttpGet(("https://raw.githubusercontent.com/ionlyusegithubformcmods/1-Line-Scripts/main/Slap%20Battles")))()
-    ]])
-end
-game:GetService("TeleportService"):Teleport(9412268818)
-                    end    
-                })
-
-Tab4:AddButton({
-	Name = "Fast Slapple Farm (Copies script, put in autoexec)",
-	Callback = function()
-setclipboard("loadstring(game:HttpGet('https://raw.githubusercontent.com/ionlyusegithubformcmods/1-Line-Scripts/main/Slap%20Farm'))()")
-                    end    
-                })
-
-Tab4:AddToggle({
-                    Name = "Slapple Farm (Only works in arena)",
-                    Default = false,
-                    Callback = function(Value)
-SlappleFarm = Value
-while SlappleFarm do
-for i, v in ipairs(workspace.Arena.island5.Slapples:GetDescendants()) do
-                if game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and game.Players.LocalPlayer.Character:FindFirstChild("entered") and v.Name == "Glove" and v:FindFirstChildWhichIsA("TouchTransmitter") then
-                    firetouchinterest(game.Players.LocalPlayer.Character.HumanoidRootPart, v, 0)
-        firetouchinterest(game.Players.LocalPlayer.Character.HumanoidRootPart, v, 1)
-                end
-            end
-task.wait()
-end
-end
-                })
-
-Tab2:AddToggle({
-                    Name = "Slap Aura",
-                    Default = false,
-                    Callback = function(Value)
-SlapAura = Value
-                while SlapAura do
-for i,v in pairs(game.Players:GetChildren()) do
-                    if v ~= game.Players.LocalPlayer and game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and v.Character then
-if v.Character:FindFirstChild("entered") and v.Character:FindFirstChild("HumanoidRootPart") then
-Magnitude = (game.Players.LocalPlayer.Character.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).Magnitude
-                        if 25 >= Magnitude then
-game.ReplicatedStorage.KSHit:FireServer(v.Character:WaitForChild("HumanoidRootPart"))
-                    end
-end
-end
-                end
-task.wait()
-end
-end
-                })
-
-Tab2:AddButton({
-	Name = "Godmode (Resets character) (Breaks killstreak)",
-	Callback = function()
-if game.Players.LocalPlayer.Character:FindFirstChild("entered") == nil then
-firetouchinterest(game.Players.LocalPlayer.Character:WaitForChild("Head"), workspace.Lobby.Teleport1, 0)
-firetouchinterest(game.Players.LocalPlayer.Character:WaitForChild("Head"), workspace.Lobby.Teleport1, 1)
-end
-repeat task.wait() until game.Players.LocalPlayer.Character:FindFirstChildWhichIsA("Tool") or game.Players.LocalPlayer.Backpack:FindFirstChildWhichIsA("Tool")
-for i,v in pairs(game.Players.LocalPlayer.Character:GetChildren()) do
-                    if v.ClassName == "Tool" then
-                        v.Parent = game.LogService
-                    end
-                end
-for i,v in pairs(game.Players.LocalPlayer.Backpack:GetChildren()) do
-                        v.Parent = game.LogService
-                end
-game:GetService("ReplicatedStorage"):WaitForChild("HumanoidDied"):FireServer(game.Players.LocalPlayer.Character,false)
-wait(3.75)
-for i,v in pairs(game.LogService:GetChildren()) do
-                        v.Parent = game.Players.LocalPlayer.Backpack
-                end
-for i,v in pairs(game.Players.LocalPlayer.Backpack:GetChildren()) do
-                        game.Players.LocalPlayer.Character.Humanoid:EquipTool(v)
-                end 
-game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = game.workspace.Origo.CFrame * CFrame.new(0,-5,0)
-                    end    
-                })
-
-                Tab2:AddToggle({
-                    Name = "Rhythm Explosion Spam (All gloves)",
-                    Default = false,
-                    Callback = function(Value)
-RhythmSpam = Value
-while RhythmSpam do
-game:GetService("ReplicatedStorage").rhythmevent:FireServer("AoeExplosion",0)
-task.wait()
-end
-                    end    
-                })
-
-Tab2:AddToggle({
-                    Name = "Rojo Spam (All gloves)",
-                    Default = false,
-                    Callback = function(Value)
-RojoSpam = Value
-while RojoSpam do
-game:GetService("ReplicatedStorage"):WaitForChild("RojoAbility"):FireServer("Release", {game.Players[Person].Character.HumanoidRootPart.CFrame})
-task.wait()
-end
-                    end    
-                })
-
-Tab2:AddTextbox({
-	Name = "Make person use rojo spam",
-	Default = "Username",
-	TextDisappear = false,
-	Callback = function(Value)
-if Value == "Me" or Value == "me" or Value == "Username" or Value == "" then
-Person = game.Players.LocalPlayer.Name
-else
-Person = Value
-end
-	end	  
-})
-Person = game.Players.LocalPlayer.Name
-
-                Tab2:AddToggle({
-                    Name = "Null Spam (All gloves)",
-                    Default = false,
-                    Callback = function(Value)
-NullSpam = Value
-while NullSpam do
-game:GetService("ReplicatedStorage").NullAbility:FireServer()
-task.wait()
-end
-                    end    
-                })
-
-                Tab2:AddToggle({
-                    Name = "Retro Spam (All gloves)",
-                    Default = false,
-                    Callback = function(Value)
-RetroSpam = Value
-while RetroSpam do
-game:GetService("ReplicatedStorage").RetroAbility:FireServer(RetroAbility)
-task.wait()
-end
-                    end    
-                })
-
-Tab2:AddDropdown({
-	Name = "Retro Ability",
-	Default = "Rocket Launcher",
-	Options = {"Rocket Launcher", "Ban Hammer", "Bomb"},
-	Callback = function(Value)
-RetroAbility = Value
-	end    
-})
-
-                Tab2:AddToggle({
-                    Name = "Killstreak Orb Spam",
-                    Default = false,
-                    Callback = function(Value)
-On = Value
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Killstreak" do
-game:GetService("ReplicatedStorage").KSABILI:FireServer()
-wait(6.1)
-end
-                    end   
-})
-
-Tab2:AddToggle({
-                    Name = "Auto Enter Arena",
-                    Default = false,
-                    Callback = function(Value)
-AutoEnterArena = Value
-while AutoEnterArena do
-if game.Players.LocalPlayer.Character:FindFirstChild("entered") == nil and game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-firetouchinterest(game.Players.LocalPlayer.Character:WaitForChild("Head"), workspace.Lobby.Teleport1, 0)
-firetouchinterest(game.Players.LocalPlayer.Character:WaitForChild("Head"), workspace.Lobby.Teleport1, 1)
+-- ============================================================
+--  REMOTES (mapped from FourHub)
+-- ============================================================
+local function GetRemote(parent, pathStr)
+    local cur = parent
+    for _, name in ipairs(pathStr:split(".")) do
+        if not cur then return nil end
+        cur = cur:FindFirstChild(name)
     end
-task.wait()
+    return cur
 end
-end
-                })
 
-if game.Workspace:FindFirstChild("NametagChanged") == nil then
-local NametagChanged = Instance.new("StringValue", workspace)
-NametagChanged.Name = "NametagChanged"
-NametagChanged.Value = ""
+local Remotes = {
+    M1              = GetRemote(replicated, "CombatSystem.Remotes.RequestHit"),
+    UseSkill        = GetRemote(replicated, "AbilitySystem.Remotes.RequestAbility"),
+    UseFruit        = GetRemote(replicated, "RemoteEvents.FruitPowerRemote"),
+    QuestAccept     = GetRemote(replicated, "RemoteEvents.QuestAccept"),
+    QuestAbandon    = GetRemote(replicated, "RemoteEvents.QuestAbandon"),
+    UseItem         = GetRemote(replicated, "Remotes.UseItem"),
+    TP_Portal       = GetRemote(replicated, "Remotes.TeleportToPortal"),
+    AddStat         = GetRemote(replicated, "RemoteEvents.AllocateStat"),
+    SummonBoss      = GetRemote(replicated, "Remotes.RequestSummonBoss"),
+    EquipWeapon     = GetRemote(replicated, "Remotes.EquipWeapon"),
+    SlimeCraft      = GetRemote(replicated, "Remotes.RequestSlimeCraft"),
+    GrailCraft      = GetRemote(replicated, "Remotes.RequestGrailCraft"),
+    ArmHaki         = GetRemote(replicated, "RemoteEvents.HakiRemote"),
+    ObserHaki       = GetRemote(replicated, "RemoteEvents.ObservationHakiRemote"),
+    ConquerorHaki   = GetRemote(replicated, "Remotes.ConquerorHakiRemote"),
+    OpenDungeon     = GetRemote(replicated, "Remotes.RequestDungeonPortal"),
+    SettingsToggle  = GetRemote(replicated, "RemoteEvents.SettingsToggle"),
+    SkillTreeUpgrade= GetRemote(replicated, "RemoteEvents.SkillTreeUpgrade"),
+    Enchant         = GetRemote(replicated, "Remotes.EnchantAccessory"),
+    Blessing        = GetRemote(replicated, "Remotes.BlessWeapon"),
+    UpInventory     = GetRemote(replicated, "Remotes.UpdateInventory"),
+    ReqInventory    = GetRemote(replicated, "Remotes.RequestInventory"),
+    HakiStateUpdate = GetRemote(replicated, "RemoteEvents.HakiStateUpdate"),
+    MerchantBuy     = GetRemote(replicated, "Remotes.MerchantRemotes.PurchaseMerchantItem"),
+    OpenMerchantR   = GetRemote(replicated, "Remotes.MerchantRemotes.OpenMerchantUI"),
+    StockUpdate     = GetRemote(replicated, "Remotes.MerchantRemotes.MerchantStockUpdate"),
+    PurchaseProduct = GetRemote(replicated, "Remotes.ShopRemotes.PurchaseProduct"),
+    JJKSummonBoss   = GetRemote(replicated, "Remotes.RequestSpawnStrongestBoss"),
+    RimuruBoss      = GetRemote(replicated, "RemoteEvents.RequestSpawnRimuru"),
+    AnosBoss        = GetRemote(replicated, "Remotes.RequestSpawnAnosBoss"),
+    TrueAizenBoss   = GetRemote(replicated, "RemoteEvents.RequestSpawnTrueAizen"),
+    AtomicBoss      = GetRemote(replicated, "RemoteEvents.RequestSpawnAtomic"),
+    NotifyItemDrop  = GetRemote(replicated, "Remotes.NotifyItemDrop"),
+    BossUIUpdate    = GetRemote(replicated, "Remotes.BossUIUpdate"),
+    Ascend          = GetRemote(replicated, "RemoteEvents.RequestAscend"),
+    ReqAscend       = GetRemote(replicated, "RemoteEvents.GetAscendData"),
+    CloseAscend     = GetRemote(replicated, "RemoteEvents.CloseAscendUI"),
+    SpecPassiveReroll=GetRemote(replicated, "RemoteEvents.SpecPassiveReroll"),
+    SpecPassiveSkip = GetRemote(replicated, "RemoteEvents.SpecPassiveUpdateAutoSkip"),
+    SpecPassiveUpdate=GetRemote(replicated, "RemoteEvents.SpecPassiveDataUpdate"),
+    SkillTreeUpdate = GetRemote(replicated, "RemoteEvents.SkillTreeUpdate"),
+    UpStatReroll    = GetRemote(replicated, "RemoteEvents.StatRerollUpdate"),
+    UpPlayerStats   = GetRemote(replicated, "RemoteEvents.UpdatePlayerStats"),
+    UpAscend        = GetRemote(replicated, "RemoteEvents.AscendDataUpdate"),
+    RerollSingleStat= GetRemote(replicated, "Remotes.RerollSingleStat"),
+    Roll_Trait      = GetRemote(replicated, "RemoteEvents.TraitReroll"),
+    TraitAutoSkip   = GetRemote(replicated, "RemoteEvents.TraitUpdateAutoSkip"),
+    TraitConfirm    = GetRemote(replicated, "RemoteEvents.TraitConfirm"),
+    TitleSync       = GetRemote(replicated, "RemoteEvents.TitleDataSync"),
+    EquipTitle      = GetRemote(replicated, "RemoteEvents.TitleEquip"),
+    TitleUnequip    = GetRemote(replicated, "RemoteEvents.TitleUnequip"),
+    EquipRune       = GetRemote(replicated, "Remotes.EquipRune"),
+    LoadoutLoad     = GetRemote(replicated, "RemoteEvents.LoadoutLoad"),
+    ArtifactSync    = GetRemote(replicated, "RemoteEvents.ArtifactDataSync"),
+    ArtifactClaim   = GetRemote(replicated, "RemoteEvents.ArtifactMilestoneClaimReward"),
+    MassDelete      = GetRemote(replicated, "RemoteEvents.ArtifactMassDeleteByUUIDs"),
+    MassUpgrade     = GetRemote(replicated, "RemoteEvents.ArtifactMassUpgrade"),
+    ArtifactLock    = GetRemote(replicated, "RemoteEvents.ArtifactLock"),
+    ArtifactUnequip = GetRemote(replicated, "RemoteEvents.ArtifactUnequip"),
+    ArtifactEquip   = GetRemote(replicated, "RemoteEvents.ArtifactEquip"),
+    UseCode         = GetRemote(replicated, "RemoteEvents.CodeRedeem"),
+    TradeRespond    = GetRemote(replicated, "Remotes.TradeRemotes.RespondToRequest"),
+    TradeSend       = GetRemote(replicated, "Remotes.TradeRemotes.SendTradeRequest"),
+    TradeAddItem    = GetRemote(replicated, "Remotes.TradeRemotes.AddItemToTrade"),
+    TradeReady      = GetRemote(replicated, "Remotes.TradeRemotes.SetReady"),
+    TradeConfirm    = GetRemote(replicated, "Remotes.TradeRemotes.ConfirmTrade"),
+    TradeUpdated    = GetRemote(replicated, "Remotes.TradeRemotes.TradeUpdated"),
+    SettingsSync    = GetRemote(replicated, "RemoteEvents.SettingsSync"),
+    DungeonWaveVote = GetRemote(replicated, "Remotes.DungeonWaveVote"),
+}
+
+-- ============================================================
+--  SHARED STATE
+-- ============================================================
+local Shared = {
+    Farm            = true,
+    Recovering      = false,
+    MovingIsland    = false,
+    Island          = "",
+    Target          = nil,
+    KillTick        = 0,
+    TargetValid     = false,
+    QuestNPC        = "",
+    MobIdx          = 1,
+    AllMobIdx       = 1,
+    WeapRotationIdx = 1,
+    ComboIdx        = 1,
+    ParsedCombo     = {},
+    ActiveWeap      = "",
+    ArmHaki         = false,
+    BossTIMap       = {},
+    InventorySynced = false,
+    Stats           = {},
+    Settings        = {},
+    GemStats        = {},
+    SkillTree       = { Nodes={}, Points=0 },
+    Passives        = {},
+    SpecStatsSlider = {},
+    ArtifactSession = { Inventory={}, Dust=0 },
+    UpBlacklist     = {},
+    MerchantBusy    = false,
+    LocalMerchantTime=0,
+    LastTimerTick   = tick(),
+    MerchantExecute = false,
+    FirstMerchantSync=false,
+    CurrentStock    = {},
+    LastM1          = 0,
+    LastWRSwitch    = 0,
+    LastSwitch      = { Title="", Rune="" },
+    LastBuildSwitch = 0,
+    LastDungeon     = 0,
+    AltDamage       = {},
+    AltActive       = false,
+    TradeState      = {},
+    GlobalPrio      = "FARM",
+    UnlockedTitles  = {},
+    Cached          = { Inv={}, Accessories={}, RawWeapCache={ Sword={}, Melee={} } },
+}
+
+-- Global toggles (for TP/movement functions)
+_G.FarmLevel        = false
+_G.AutoAttack       = false
+_G.FarmSelectedMob  = false
+_G.SelectedMobType  = nil
+_G.AutoHaki         = false
+_G.AutoStatsDefense = false
+_G.AutoStatsPower   = false
+_G.AutoStatsFruit   = false
+_G.AutoEquipTool    = false
+_G.SelectedAutoEquipTool = nil
+_G.AutoSkill1       = false
+_G.AutoSkill2       = false
+_G.SailorNoclip     = false
+_G.SailorESP        = false
+_G.SailorAutoFarm   = false
+_G.SelectedChestRarity = "Common Chest"
+_G.SelectedChestNumber = 2
+_G.SelectedTeleportLocation = TeleportLocations[1]
+_G.UnlockDungeon    = false
+
+-- Thread management
+local Flags = {}
+local function Thread(featurePath, featureFunc, isEnabled, ...)
+    local pathParts = featurePath:split(".")
+    local currentTable = Flags
+    for i = 1, #pathParts - 1 do
+        local part = pathParts[i]
+        if not currentTable[part] then currentTable[part] = {} end
+        currentTable = currentTable[part]
+    end
+    local flagKey = pathParts[#pathParts]
+    local activeThread = currentTable[flagKey]
+    if isEnabled then
+        if not activeThread or coroutine.status(activeThread) == "dead" then
+            currentTable[flagKey] = task.spawn(featureFunc, ...)
+        end
+    else
+        if activeThread and typeof(activeThread) == "thread" then
+            task.cancel(activeThread)
+            currentTable[flagKey] = nil
+        end
+    end
 end
-Tab4:AddToggle({
-                    Name = "Auto Change Nametag (Clientside)",
-                    Default = false,
-                    Callback = function(Value)
-AutoChangeNameTag = Value
-        if AutoChangeNameTag == true and game.Players.LocalPlayer.Character:FindFirstChild("Nametag",true) then
-        game.Players.LocalPlayer.Character.Head.Nametag.TextLabel.Text = workspace.NametagChanged.Value
+
+-- ============================================================
+--  WINDUI LOAD
+-- ============================================================
+local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
+
+-- ============================================================
+--  HELPER FUNCTIONS
+-- ============================================================
+
+local function GetCharacter()
+    local c = player.Character
+    return (c and c:FindFirstChild("HumanoidRootPart") and c:FindFirstChildOfClass("Humanoid")) and c or nil
 end
-workspace.NametagChanged.Changed:Connect(function()
-        if AutoChangeNameTag == true and game.Players.LocalPlayer.Character:FindFirstChild("Nametag",true) then
-        game.Players.LocalPlayer.Character.Head.Nametag.TextLabel.Text = workspace.NametagChanged.Value
+
+local function Abbreviate(n)
+    local abbrev = {{1e12,"T"},{1e9,"B"},{1e6,"M"},{1e3,"K"}}
+    for _, v in ipairs(abbrev) do
+        if n >= v[1] then return string.format("%.1f%s", n/v[1], v[2]) end
+    end
+    return tostring(n)
 end
+
+local function CommaFormat(n)
+    local s = tostring(n)
+    return s:reverse():gsub("%d%d%d", "%1,"):reverse():gsub("^,","")
+end
+
+function GetBestMob(currentLevel)
+    local bestMob, highestValidLevel = nil, -1
+    for _, mob in ipairs(mobs) do
+        if mob.recommendedLevel <= currentLevel and mob.recommendedLevel > highestValidLevel then
+            highestValidLevel = mob.recommendedLevel
+            bestMob = mob
+        end
+    end
+    return bestMob
+end
+
+TeleportToMobIsland = function(mob)
+    if not mob or not mob.island then return end
+    pcall(function()
+        replicated.Remotes.TeleportToPortal:FireServer(mob.island)
+    end)
+    WindUI:Notify({
+        Title   = "Teleporting",
+        Content = "Going to "..mob.island.." for "..mob.npcType,
+        Duration= 2,
+        Icon    = "map-pin",
+    })
+end
+
+GetConnectionEnemies = function(v)
+    local d = {
+        positions  = {},
+        searchName = string.lower(v),
+        playerHrp  = player.Character and player.Character:FindFirstChild("HumanoidRootPart"),
+    }
+    for _, npc in pairs(workspace.NPCs:GetChildren()) do
+        local d2 = {
+            hrp  = npc:FindFirstChild("HumanoidRootPart"),
+            hum  = npc:FindFirstChild("Humanoid"),
+            name = string.lower(npc.Name),
+        }
+        local nameMatch = d2.name == d.searchName or string.match(d2.name, "^"..d.searchName.."%d+$")
+        if d2.hrp and d2.hum and d2.hum.Health > 0 and nameMatch then
+            table.insert(d.positions, d2.hrp.CFrame)
+        end
+    end
+    if d.playerHrp then
+        table.sort(d.positions, function(a,b)
+            return (a.Position - d.playerHrp.Position).Magnitude < (b.Position - d.playerHrp.Position).Magnitude
+        end)
+    end
+    return d.positions
+end
+
+GetNearestMob = function()
+    local data = {
+        nearest   = nil,
+        lastDist  = math.huge,
+        folder    = workspace:FindFirstChild("NPCs"),
+        playerHrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart"),
+    }
+    if not data.folder or not data.playerHrp then return nil end
+    for _, v in pairs(data.folder:GetChildren()) do
+        local hrp = v:FindFirstChild("HumanoidRootPart")
+        local hum = v:FindFirstChild("Humanoid")
+        if hrp and hum and hum.Health > 0 then
+            local dist = (data.playerHrp.Position - hrp.Position).Magnitude
+            if dist < data.lastDist then
+                data.lastDist = dist
+                data.nearest  = hrp
+            end
+        end
+    end
+    return data.nearest
+end
+
+GetBackpackItems = function()
+    local items = {}
+    for _, tool in ipairs(player.Backpack:GetChildren()) do
+        table.insert(items, tool.Name)
+    end
+    return items
+end
+
+-- Tween movement (with BodyVelocity, respects _G.FarmLevel)
+TP = function(targetCFrame)
+    local data = {
+        hrp   = player.Character and player.Character:FindFirstChild("HumanoidRootPart"),
+        hum   = player.Character and player.Character:FindFirstChild("Humanoid"),
+        speed = 250,
+        offset= targetCFrame * CFrame.new(0, 15, 0),
+    }
+    if not data.hrp or not data.hum then return end
+    data.dist  = (data.hrp.Position - data.offset.Position).Magnitude
+    data.tween = TweenService:Create(data.hrp,
+        TweenInfo.new(data.dist / data.speed, Enum.EasingStyle.Linear),
+        {CFrame = data.offset})
+    local bv = data.hrp:FindFirstChild("FloatBV") or Instance.new("BodyVelocity")
+    bv.Name       = "FloatBV"
+    bv.MaxForce   = Vector3.new(math.huge, math.huge, math.huge)
+    bv.Velocity   = Vector3.new(0,0,0)
+    bv.Parent     = data.hrp
+    task.spawn(function()
+        while bv and bv.Parent do
+            if not _G.FarmLevel or data.hum.Health <= 0 or _G.UnlockDungeon then
+                bv:Destroy(); break
+            end
+            task.wait()
+        end
+    end)
+    data.tween:Play()
+    while data.tween.PlaybackState == Enum.PlaybackState.Playing do
+        if not _G.FarmLevel then data.tween:Cancel(); break end
+        task.wait()
+    end
+end
+
+-- Simple tween (no _G guard)
+Tween2 = function(targetCFrame)
+    local data = {
+        hrp   = player.Character and player.Character:FindFirstChild("HumanoidRootPart"),
+        speed = 150,
+    }
+    if not data.hrp then return end
+    data.dist  = (data.hrp.Position - targetCFrame.Position).Magnitude
+    data.tween = TweenService:Create(data.hrp,
+        TweenInfo.new(data.dist / data.speed, Enum.EasingStyle.Linear),
+        {CFrame = targetCFrame})
+    data.bv           = Instance.new("BodyVelocity")
+    data.bv.MaxForce  = Vector3.new(math.huge, math.huge, math.huge)
+    data.bv.Velocity  = Vector3.zero
+    data.bv.Parent    = data.hrp
+    data.tween:Play()
+    data.tween.Completed:Wait()
+    data.bv:Destroy()
+end
+
+-- HybridMove (tween + teleport combo)
+local function HybridMove(targetCF)
+    local character = GetCharacter()
+    local root = character and character:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+    local distance  = (root.Position - targetCF.Position).Magnitude
+    local tweenSpeed= 180
+    if distance > 50 then
+        local tweenTarget = targetCF * CFrame.new(0,0,150)
+        local tweenDist   = (root.Position - tweenTarget.Position).Magnitude
+        local tween = TweenService:Create(root,
+            TweenInfo.new(tweenDist/tweenSpeed, Enum.EasingStyle.Linear),
+            {CFrame = tweenTarget})
+        tween:Play(); tween.Completed:Wait()
+        task.wait(0.1)
+    end
+    root.CFrame = targetCF
+    root.AssemblyLinearVelocity = Vector3.new(0,0.01,0)
+    task.wait(0.2)
+end
+
+-- ServerHop
+ServerHop = function()
+    local Api = "https://games.roblox.com/v1/games/"..PlaceId.."/servers/Public?sortOrder=Asc&limit=100"
+    local success, result = pcall(function()
+        return HttpService:JSONDecode(game:HttpGet(Api))
+    end)
+    if success and result and result.data then
+        local possibleServers = {}
+        for _, server in pairs(result.data) do
+            if server.playing < server.maxPlayers and server.id ~= game.JobId then
+                table.insert(possibleServers, server.id)
+            end
+        end
+        if #possibleServers > 0 then
+            TeleportService:TeleportToPlaceInstance(PlaceId, possibleServers[math.random(1,#possibleServers)], player)
+        end
+    end
+end
+
+-- FarmBestMob (original from script 1)
+local lastTeleport = 0
+FarmBestMob = function()
+    local ch  = player.Character
+    local hrp = ch and ch:FindFirstChild("HumanoidRootPart")
+    local hum = ch and ch:FindFirstChild("Humanoid")
+    if not hrp or not hum or hum.Health <= 0 then return end
+    local d = { level = player.Data and player.Data.Level and player.Data.Level.Value or 0 }
+    d.mob = GetBestMob(d.level)
+    if not d.mob then return end
+    local mobCFrames = GetConnectionEnemies(d.mob.npcType)
+    if #mobCFrames > 0 then
+        local targetCFrame = mobCFrames[1]
+        local distance = (hrp.Position - targetCFrame.Position).Magnitude
+        if distance > 1000 then
+            if tick() - lastTeleport > 5 then
+                TeleportToMobIsland(d.mob)
+                lastTeleport = tick()
+                task.wait(2)
+            end
+            return
+        end
+        if distance > 10 then
+            TP(targetCFrame * CFrame.new(50,0,50))
+        end
+        if _G.FarmLevel then
+            pcall(function()
+                replicated.CombatSystem.Remotes.RequestHit:FireServer(targetCFrame.Position)
+            end)
+        end
+    else
+        if tick() - lastTeleport > 3 then
+            TeleportToMobIsland(d.mob)
+            lastTeleport = tick()
+            task.wait(2)
+        end
+    end
+end
+
+-- Get nearest aura target
+local function GetNearestAuraTarget(range)
+    range = range or 200
+    local nearest, lastDist = nil, range
+    local ch   = player.Character
+    local root = ch and ch:FindFirstChild("HumanoidRootPart")
+    if not root then return nil end
+    local mobFolder = workspace:FindFirstChild("NPCs")
+    if not mobFolder then return nil end
+    for _, v in ipairs(mobFolder:GetChildren()) do
+        if v:IsA("Model") then
+            local dist = (root.Position - v:GetPivot().Position).Magnitude
+            if dist <= lastDist then
+                local hum = v:FindFirstChildOfClass("Humanoid")
+                if hum and hum.Health > 0 then
+                    nearest  = v
+                    lastDist = dist
+                end
+            end
+        end
+    end
+    return nearest
+end
+
+-- CheckObsHaki
+local function CheckObsHaki()
+    local DodgeUI = PGui:FindFirstChild("DodgeCounterUI")
+    if DodgeUI and DodgeUI:FindFirstChild("MainFrame") then
+        return DodgeUI.MainFrame.Visible
+    end
+    return false
+end
+
+-- CheckArmHaki
+local function CheckArmHaki()
+    if Shared.ArmHaki then return true end
+    local ch = GetCharacter()
+    if ch then
+        local leftArm  = ch:FindFirstChild("Left Arm")  or ch:FindFirstChild("LeftUpperArm")
+        local rightArm = ch:FindFirstChild("Right Arm") or ch:FindFirstChild("RightUpperArm")
+        if (leftArm and leftArm:FindFirstChild("Lightning Strike")) or
+           (rightArm and rightArm:FindFirstChild("Lightning Strike")) then
+            Shared.ArmHaki = true; return true
+        end
+    end
+    return false
+end
+
+-- IsBusy (ForceField check)
+local function IsBusy()
+    return player.Character and player.Character:FindFirstChildOfClass("ForceField") ~= nil
+end
+
+-- EquipWeapon helper
+local Tables = {
+    ManualWeaponClass = { ["Invisible"]="Power", ["Bomb"]="Power", ["Quake"]="Power" },
+    Weapon = {"Melee","Sword","Power"},
+    OwnedWeapon = {}, AllOwnedWeapons = {}, OwnedAccessory = {},
+    OwnedItem = {}, RuneList = {"None"},
+    MobList = {}, MobToIsland = {},
+    BossList = {}, AllBossList = {}, SummonList = {}, OtherSummonList = {"StrongestHistory","StrongestToday","Rimuru","Anos","TrueAizen","Atomic","AbyssalEmpress"},
+    DiffList = {"Normal","Medium","Hard","Extreme"},
+    MiniBossList = {"ThiefBoss","MonkeyBoss","DesertBoss","SnowBoss","PandaMiniBoss"},
+    Rarities = {"Common","Rare","Epic","Legendary","Mythical","Secret","Aura Crate","Cosmetic Crate"},
+    CraftItemList = {"SlimeKey","DivineGrail"},
+    DungeonList = {"CidDungeon","RuneDungeon","DoubleDungeon","BossRush","InfiniteTower"},
+    TraitList={}, RaceList={}, ClanList={}, SpecPassive={}, GemStat={}, GemRank={},
+    QuestlineList={}, TitleList={}, UnlockedTitle={},
+    AllEntitiesList={},
+}
+
+local SummonMap = {}
+
+local function GetSafeModule(parent, name)
+    local obj = parent and parent:FindFirstChild(name)
+    if obj and obj:IsA("ModuleScript") then
+        local ok, res = pcall(require, obj)
+        if ok then return res end
+    end
+    return nil
+end
+
+local Modules = {
+    BossConfig    = GetSafeModule(replicated:FindFirstChild("Modules"), "BossConfig") or {Bosses={}},
+    TimedConfig   = GetSafeModule(replicated:FindFirstChild("Modules"), "TimedBossConfig"),
+    SummonConfig  = GetSafeModule(replicated:FindFirstChild("Modules"), "SummonableBossConfig"),
+    Merchant      = GetSafeModule(replicated:FindFirstChild("Modules"), "MerchantConfig") or {ITEMS={}},
+    WeaponClass   = GetSafeModule(replicated:FindFirstChild("Modules"), "WeaponClassification") or {Tools={}},
+    Stats         = GetSafeModule(replicated:FindFirstChild("Modules"), "StatRerollConfig") or {StatKeys={},RankOrder={}},
+    Quests        = GetSafeModule(replicated:FindFirstChild("Modules"), "QuestConfig") or {RepeatableQuests={},Questlines={}},
+    ArtifactConfig= GetSafeModule(replicated:FindFirstChild("Modules"), "ArtifactConfig"),
+    Title         = GetSafeModule(replicated:FindFirstChild("Modules"), "TitlesConfig") or {Titles={},GetSortedTitleIds=function() return {} end},
+    Trait         = GetSafeModule(replicated:FindFirstChild("Modules"), "TraitConfig") or {Traits={}},
+    Race          = GetSafeModule(replicated:FindFirstChild("Modules"), "RaceConfig") or {Races={}},
+    Clan          = GetSafeModule(replicated:FindFirstChild("Modules"), "ClanConfig") or {Clans={}},
+    SpecPassive   = GetSafeModule(replicated:FindFirstChild("Modules"), "SpecPassiveConfig"),
+    SkillTree     = GetSafeModule(replicated:FindFirstChild("Modules"), "SkillTreeConfig"),
+    Codes         = GetSafeModule(replicated, "CodesConfig") or {Codes={}},
+    ItemRarity    = GetSafeModule(replicated:FindFirstChild("Modules"), "ItemRarityConfig"),
+    Fruits        = GetSafeModule(replicated:FindFirstChild("FruitPowerSystem"), "FruitPowerConfig") or {Powers={}},
+    DungeonMerchant=GetSafeModule(replicated:FindFirstChild("Modules"), "DungeonMerchantConfig"),
+    InfiniteTowerMerchant=GetSafeModule(replicated:FindFirstChild("Modules"), "InfiniteTowerMerchantConfig"),
+    BossRushMerchant=GetSafeModule(replicated:FindFirstChild("Modules"), "BossRushMerchantConfig"),
+}
+
+Tables.GemStat  = (Modules.Stats and Modules.Stats.StatKeys) or {}
+Tables.GemRank  = (Modules.Stats and Modules.Stats.RankOrder) or {}
+
+local RarityWeight = {Secret=1,Mythical=2,Legendary=3,Epic=4,Rare=5,Uncommon=6,Common=7}
+
+-- Populate boss/summon lists
+if Modules.TimedConfig and Modules.TimedConfig.Bosses then
+    for _, data in pairs(Modules.TimedConfig.Bosses) do
+        table.insert(Tables.BossList, data.displayName)
+        local tpName = data.spawnLocation:gsub(" Island",""):gsub(" Station","")
+        if data.spawnLocation == "Hueco Mundo Island" then tpName = "HuecoMundo" end
+        if data.spawnLocation == "Judgement Island" then tpName = "Judgement" end
+        Shared.BossTIMap[data.displayName] = tpName
+    end
+    table.sort(Tables.BossList)
+end
+
+if Modules.SummonConfig and Modules.SummonConfig.Bosses then
+    for _, data in pairs(Modules.SummonConfig.Bosses) do
+        table.insert(Tables.SummonList, data.displayName)
+        SummonMap[data.displayName] = data.bossId
+    end
+    table.sort(Tables.SummonList)
+end
+
+for bossName, _ in pairs(Modules.BossConfig.Bosses or {}) do
+    table.insert(Tables.AllBossList, bossName:gsub("Boss$",""))
+end
+table.sort(Tables.AllBossList)
+
+for name,_ in pairs(Modules.Trait.Traits or {}) do table.insert(Tables.TraitList, name) end
+table.sort(Tables.TraitList, function(a,b)
+    local ra = (Modules.Trait.Traits[a] or {}).Rarity
+    local rb = (Modules.Trait.Traits[b] or {}).Rarity
+    if ra ~= rb then return (RarityWeight[ra] or 99) < (RarityWeight[rb] or 99) end
+    return a < b
 end)
-            game.Players.LocalPlayer.CharacterAdded:Connect(function()
-                if AutoChangeNameTag == true then
-repeat task.wait() until game.Players.LocalPlayer.Character:FindFirstChild("Nametag",true)
-                game.Players.LocalPlayer.Character.Head.Nametag.TextLabel.Text = workspace.NametagChanged.Value
+
+for name,_ in pairs(Modules.Race.Races or {}) do table.insert(Tables.RaceList, name) end
+table.sort(Tables.RaceList)
+
+for name,_ in pairs(Modules.Clan.Clans or {}) do table.insert(Tables.ClanList, name) end
+table.sort(Tables.ClanList)
+
+if Modules.SpecPassive and Modules.SpecPassive.Passives then
+    for name,_ in pairs(Modules.SpecPassive.Passives) do table.insert(Tables.SpecPassive, name) end
+    table.sort(Tables.SpecPassive)
+end
+
+for k,_ in pairs(Modules.Quests.Questlines or {}) do table.insert(Tables.QuestlineList, k) end
+table.sort(Tables.QuestlineList)
+
+Tables.MerchantList = {}
+for name,_ in pairs(Modules.Merchant.ITEMS or {}) do table.insert(Tables.MerchantList, name) end
+
+Tables.DungeonMerchantList = {}
+if Modules.DungeonMerchant and Modules.DungeonMerchant.ITEMS then
+    for name,_ in pairs(Modules.DungeonMerchant.ITEMS) do table.insert(Tables.DungeonMerchantList, name) end
+    table.sort(Tables.DungeonMerchantList)
+end
+
+Tables.InfiniteTowerMerchantList = {}
+if Modules.InfiniteTowerMerchant and Modules.InfiniteTowerMerchant.ITEMS then
+    for name,_ in pairs(Modules.InfiniteTowerMerchant.ITEMS) do table.insert(Tables.InfiniteTowerMerchantList, name) end
+    table.sort(Tables.InfiniteTowerMerchantList)
+end
+
+Tables.BossRushMerchantList = {}
+if Modules.BossRushMerchant and Modules.BossRushMerchant.ITEMS then
+    for name,_ in pairs(Modules.BossRushMerchant.ITEMS) do table.insert(Tables.BossRushMerchantList, name) end
+    table.sort(Tables.BossRushMerchantList)
+end
+
+if Modules.Title and Modules.Title.GetSortedTitleIds then
+    Tables.TitleList = Modules.Title:GetSortedTitleIds()
+end
+
+-- Island crystals for nearest-island detection
+local PATH = {
+    Mobs        = workspace:WaitForChild("NPCs"),
+    InteractNPCs= workspace:WaitForChild("ServiceNPCs"),
+}
+
+local IslandCrystals = {
+    ["Starter"]       = workspace:FindFirstChild("StarterIsland")       and workspace.StarterIsland:FindFirstChild("SpawnPointCrystal_Starter"),
+    ["Jungle"]        = workspace:FindFirstChild("JungleIsland")        and workspace.JungleIsland:FindFirstChild("SpawnPointCrystal_Jungle"),
+    ["Desert"]        = workspace:FindFirstChild("DesertIsland")        and workspace.DesertIsland:FindFirstChild("SpawnPointCrystal_Desert"),
+    ["Snow"]          = workspace:FindFirstChild("SnowIsland")          and workspace.SnowIsland:FindFirstChild("SpawnPointCrystal_Snow"),
+    ["Sailor"]        = workspace:FindFirstChild("SailorIsland")        and workspace.SailorIsland:FindFirstChild("SpawnPointCrystal_Sailor"),
+    ["Shibuya"]       = workspace:FindFirstChild("ShibuyaStation")      and workspace.ShibuyaStation:FindFirstChild("SpawnPointCrystal_Shibuya"),
+    ["HuecoMundo"]    = workspace:FindFirstChild("HuecoMundo")          and workspace.HuecoMundo:FindFirstChild("SpawnPointCrystal_HuecoMundo"),
+    ["Boss"]          = workspace:FindFirstChild("BossIsland")          and workspace.BossIsland:FindFirstChild("SpawnPointCrystal_Boss"),
+    ["Dungeon"]       = workspace:FindFirstChild("Main Temple")         and workspace["Main Temple"]:FindFirstChild("SpawnPointCrystal_Dungeon"),
+    ["Shinjuku"]      = workspace:FindFirstChild("ShinjukuIsland")      and workspace.ShinjukuIsland:FindFirstChild("SpawnPointCrystal_Shinjuku"),
+    ["Slime"]         = workspace:FindFirstChild("SlimeIsland")         and workspace.SlimeIsland:FindFirstChild("SpawnPointCrystal_Slime"),
+    ["Academy"]       = workspace:FindFirstChild("AcademyIsland")       and workspace.AcademyIsland:FindFirstChild("SpawnPointCrystal_Academy"),
+    ["Judgement"]     = workspace:FindFirstChild("JudgementIsland")     and workspace.JudgementIsland:FindFirstChild("SpawnPointCrystal_Judgement"),
+    ["TowerIsland"]   = workspace:FindFirstChild("TowerIsland")         and workspace.TowerIsland:FindFirstChild("SpawnPointCrystal_Tower"),
+}
+
+local function GetNearestIsland(targetPos, npcName)
+    if npcName and Shared.BossTIMap[npcName] then return Shared.BossTIMap[npcName] end
+    local nearestName, minDist = "Starter", math.huge
+    for islandName, crystal in pairs(IslandCrystals) do
+        if crystal then
+            local dist = (targetPos - crystal:GetPivot().Position).Magnitude
+            if dist < minDist then minDist = dist; nearestName = islandName end
+        end
+    end
+    return nearestName
+end
+
+local function UpdateNPCLists()
+    local current = {}
+    for _, name in pairs(Tables.MobList) do current[name] = true end
+    for _, v in pairs(PATH.Mobs:GetChildren()) do
+        local cleanName = v.Name:gsub("%d+$","")
+        local isSpecial = table.find(Tables.MiniBossList, cleanName)
+        if (isSpecial or not cleanName:find("Boss")) and not current[cleanName] then
+            table.insert(Tables.MobList, cleanName)
+            current[cleanName] = true
+            local npcPos = v:GetPivot().Position
+            local closest, minShot = "Unknown", math.huge
+            for islandName, crystal in pairs(IslandCrystals) do
+                if crystal then
+                    local dist = (npcPos - crystal:GetPivot().Position).Magnitude
+                    if dist < minShot then minShot = dist; closest = islandName end
+                end
+            end
+            Tables.MobToIsland[cleanName] = closest
+        end
+    end
+end
+
+local function GetToolTypeFromModule(toolName)
+    local function Clean(s) return s:gsub("%s+",""):lower() end
+    local ct = Clean(toolName)
+    for n, t in pairs(Tables.ManualWeaponClass) do if Clean(n)==ct then return t end end
+    if Modules.WeaponClass and Modules.WeaponClass.Tools then
+        for n, t in pairs(Modules.WeaponClass.Tools) do if Clean(n)==ct then return t end end
+    end
+    if toolName:lower():find("fruit") then return "Power" end
+    return "Melee"
+end
+
+local function GetWeaponsByType(enabledTypes)
+    local available = {}
+    local ch = GetCharacter()
+    local containers = {player.Backpack}
+    if ch then table.insert(containers, ch) end
+    for _, container in ipairs(containers) do
+        for _, tool in ipairs(container:GetChildren()) do
+            if tool:IsA("Tool") then
+                local toolType = GetToolTypeFromModule(tool.Name)
+                if enabledTypes and enabledTypes[toolType] then
+                    if not table.find(available, tool.Name) then
+                        table.insert(available, tool.Name)
+                    end
+                end
+            end
+        end
+    end
+    return available
+end
+
+-- Mob cluster finder
+local function IsValidTarget(npc)
+    if not npc or not npc.Parent then return false end
+    local hum = npc:FindFirstChildOfClass("Humanoid")
+    return hum and hum.Health > 0
+end
+
+local function GetBestMobCluster(mobDict)
+    local allMobs = {}
+    if type(mobDict) ~= "table" then return nil end
+    for _, npc in pairs(PATH.Mobs:GetChildren()) do
+        if npc:IsA("Model") and npc:FindFirstChildOfClass("Humanoid") then
+            local cleanName = npc.Name:gsub("%d+$","")
+            if mobDict[cleanName] and IsValidTarget(npc) then
+                table.insert(allMobs, npc)
+            end
+        end
+    end
+    if #allMobs == 0 then return nil end
+    local bestMob, maxNearby = allMobs[1], 0
+    for _, mobA in ipairs(allMobs) do
+        local nearby = 0
+        local posA = mobA:GetPivot().Position
+        for _, mobB in ipairs(allMobs) do
+            if (posA - mobB:GetPivot().Position).Magnitude <= 35 then nearby=nearby+1 end
+        end
+        if nearby > maxNearby then maxNearby=nearby; bestMob=mobA end
+    end
+    return bestMob, maxNearby
+end
+
+local function IsStrictBossMatch(npcName, targetDisplayName)
+    local n = npcName:lower():gsub("%s+","")
+    local t = targetDisplayName:lower():gsub("%s+","")
+    if n:find("true") and not t:find("true") then return false end
+    if t:find("strongest") then
+        local era = t:find("history") and "history" or "today"
+        return n:find("strongest") and n:find(era)
+    end
+    return n:find(t)
+end
+
+local function FireBossRemote(bossName, diff)
+    local lowerName = bossName:lower():gsub("%s+","")
+    local function GetInternalSummonId(name)
+        local cleanTarget = name:lower():gsub("%s+","")
+        for displayName, internalId in pairs(SummonMap) do
+            if displayName:lower():gsub("%s+","") == cleanTarget then return internalId end
+        end
+        return name:gsub("%s+","").."Boss"
+    end
+    pcall(function()
+        if lowerName:find("rimuru") then
+            Remotes.RimuruBoss:FireServer(diff)
+        elseif lowerName:find("anos") then
+            Remotes.AnosBoss:FireServer("Anos", diff)
+        elseif lowerName:find("trueaizen") then
+            if Remotes.TrueAizenBoss then Remotes.TrueAizenBoss:FireServer(diff) end
+        elseif lowerName:find("strongest") then
+            local arg = lowerName:find("history") and "StrongestHistory" or "StrongestToday"
+            Remotes.JJKSummonBoss:FireServer(arg, diff)
+        elseif lowerName:find("atomic") then
+            Remotes.AtomicBoss:FireServer(diff)
+        else
+            Remotes.SummonBoss:FireServer(GetInternalSummonId(bossName), diff)
+        end
+    end)
+end
+
+-- Quest helpers
+local function GetBestQuestNPC()
+    local QuestModule = Modules.Quests
+    local playerLevel = player.Data and player.Data.Level and player.Data.Level.Value or 0
+    local bestNPC, highestLevel = "QuestNPC1", -1
+    for npcId, questData in pairs(QuestModule.RepeatableQuests or {}) do
+        local reqLevel = questData.recommendedLevel or 0
+        if playerLevel >= reqLevel and reqLevel > highestLevel then
+            highestLevel = reqLevel; bestNPC = npcId
+        end
+    end
+    return bestNPC
+end
+
+local function EnsureQuestSettings()
+    pcall(function()
+        local settings = PGui.SettingsUI.MainFrame.Frame.Content.SettingsTabFrame
+        local tog1 = settings:FindFirstChild("Toggle_EnableQuestRepeat",true)
+        if tog1 and tog1.SettingsHolder.Off.Visible then
+            Remotes.SettingsToggle:FireServer("EnableQuestRepeat", true); task.wait(0.3)
+        end
+        local tog2 = settings:FindFirstChild("Toggle_AutoQuestRepeat",true)
+        if tog2 and tog2.SettingsHolder.Off.Visible then
+            Remotes.SettingsToggle:FireServer("AutoQuestRepeat", true)
+        end
+    end)
+end
+
+-- Puzzle solver
+local function UniversalPuzzleSolver(puzzleType)
+    local moduleMap = {
+        ["Dungeon"]  = replicated.Modules:FindFirstChild("DungeonConfig"),
+        ["Slime"]    = replicated.Modules:FindFirstChild("SlimePuzzleConfig"),
+        ["Demonite"] = replicated.Modules:FindFirstChild("DemoniteCoreQuestConfig"),
+        ["Hogyoku"]  = replicated.Modules:FindFirstChild("HogyokuQuestConfig"),
+    }
+    local hogyokuIslands = {"Snow","Shibuya","HuecoMundo","Shinjuku","Slime","Judgement"}
+    local targetModule = moduleMap[puzzleType]
+    if not targetModule then return end
+    local data = require(targetModule)
+    local settings = data.PuzzleSettings or data.PieceSettings
+    local piecesToCollect = data.Pieces or (settings and settings.IslandOrder)
+    local pieceModelName  = (settings and settings.PieceModelName) or "DungeonPuzzlePiece"
+    WindUI:Notify({ Title="Puzzle", Content="Starting "..puzzleType.." puzzle...", Duration=3, Icon="puzzle" })
+    for i, islandOrPiece in ipairs(piecesToCollect) do
+        local piece, tpTarget = nil, nil
+        if puzzleType == "Demonite" then tpTarget = "Academy"
+        elseif puzzleType == "Hogyoku" then tpTarget = hogyokuIslands[i]
+        else
+            tpTarget = islandOrPiece:gsub("Island",""):gsub("Station","")
+            if islandOrPiece == "HuecoMundo" then tpTarget = "HuecoMundo" end
+        end
+        if tpTarget then Remotes.TP_Portal:FireServer(tpTarget); task.wait(2.5) end
+        if puzzleType == "Demonite" or puzzleType == "Hogyoku" then
+            piece = workspace:FindFirstChild(islandOrPiece, true)
+        else
+            local islandFolder = workspace:FindFirstChild(islandOrPiece)
+            piece = islandFolder and islandFolder:FindFirstChild(pieceModelName, true) or workspace:FindFirstChild(pieceModelName, true)
+        end
+        if piece then
+            HybridMove(piece:GetPivot() * CFrame.new(0,3,0))
+            task.wait(0.5)
+            local prompt = piece:FindFirstChildOfClass("ProximityPrompt")
+                or piece:FindFirstChild("PuzzlePrompt",true)
+                or piece:FindFirstChild("ProximityPrompt",true)
+            if prompt and Support.Proximity then
+                fireproximityprompt(prompt)
+                WindUI:Notify({ Title="Puzzle", Content=string.format("Piece %d/%d collected", i, #piecesToCollect), Duration=2, Icon="check" })
+                task.wait(1.5)
+            end
+        end
+    end
+    WindUI:Notify({ Title="Puzzle Complete", Content=puzzleType.." done!", Duration=3, Icon="party-popper" })
+end
+
+-- Anti AFK
+local function DisableIdled()
+    pcall(function()
+        local cons = getconnections or get_signal_cons
+        if cons then
+            for _, v in pairs(cons(player.Idled)) do
+                if v.Disable then v:Disable() elseif v.Disconnect then v:Disconnect() end
+            end
+        end
+    end)
+end
+
+-- SafeTeleportToNPC
+local function SafeTeleportToNPC(targetName, customMap)
+    local character = GetCharacter()
+    local root = character and character:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+    local actualName = (customMap and customMap[targetName]) or targetName
+    local target = workspace:FindFirstChild(actualName) or PATH.InteractNPCs:FindFirstChild(actualName)
+    if not target then
+        for _, v in pairs(PATH.InteractNPCs:GetChildren()) do
+            if v.Name:find(actualName) then target = v; break end
+        end
+    end
+    if target then
+        root.CFrame = target:GetPivot() * CFrame.new(0,3,0)
+        root.AssemblyLinearVelocity = Vector3.new(0,0.01,0)
+        root.AssemblyAngularVelocity = Vector3.zero
+    end
+end
+
+-- FPS Boost
+local function ApplyFPSBoost()
+    pcall(function()
+        Lighting.GlobalShadows = false
+        Lighting.FogEnd = 9e9
+        Lighting.Brightness = 1
+        Lighting.ShadowSoftness = 0
+        if Terrain then
+            Terrain.WaterWaveSize = 0; Terrain.WaterWaveSpeed = 0
+            Terrain.WaterReflectance = 0; Terrain.WaterTransparency = 0
+        end
+        for _, v in pairs(Lighting:GetChildren()) do
+            if v:IsA("PostProcessEffect") or v:IsA("BloomEffect") or v:IsA("BlurEffect") or v:IsA("SunRaysEffect") then
+                v.Enabled = false
+            end
+        end
+        task.spawn(function()
+            for _, v in pairs(workspace:GetDescendants()) do
+                pcall(function()
+                    if v:IsA("BasePart") then
+                        v.Material = Enum.Material.SmoothPlastic; v.Reflectance = 0; v.CastShadow = false
+                    elseif v:IsA("Decal") or v:IsA("Texture") then
+                        v.Transparency = 1
+                    elseif v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Fire") or v:IsA("Smoke") or v:IsA("Sparkles") then
+                        v.Enabled = false
+                    end
+                end)
+            end
+        end)
+    end)
+end
+
+-- Pity helper
+local function GetCurrentPity()
+    local ok, pityLabel = pcall(function()
+        return PGui.BossUI.MainFrame.BossHPBar.Pity
+    end)
+    if ok and pityLabel then
+        local current, max = pityLabel.Text:match("Pity: (%d+)/(%d+)")
+        return tonumber(current) or 0, tonumber(max) or 25
+    end
+    return 0, 25
+end
+
+-- Auto upgrade loop (enchant/blessing)
+local function AutoUpgradeLoop(mode)
+    local sourceTable = (mode=="Enchant") and Tables.OwnedAccessory or Tables.OwnedWeapon
+    local remote      = (mode=="Enchant") and Remotes.Enchant or Remotes.Blessing
+    while _G["Auto"..mode] do
+        local workDone = false
+        for _, itemName in ipairs(sourceTable) do
+            if not Shared.UpBlacklist[itemName] then
+                workDone = true
+                pcall(function() remote:FireServer(itemName) end)
+                task.wait(1.5); break
+            end
+        end
+        if not workDone then _G["Auto"..mode] = false; break end
+        task.wait(0.1)
+    end
+end
+
+-- ============================================================
+--  REMOTE LISTENERS
+-- ============================================================
+if Remotes.UpInventory then
+    Remotes.UpInventory.OnClientEvent:Connect(function(category, data)
+        Shared.InventorySynced = true
+        if category == "Items" then
+            Shared.Cached.Inv = data or {}
+            table.clear(Tables.OwnedItem)
+            for _, item in pairs(data) do
+                if not table.find(Tables.OwnedItem, item.name) then
+                    table.insert(Tables.OwnedItem, item.name)
+                end
+            end
+            table.sort(Tables.OwnedItem)
+        elseif category == "Accessories" then
+            table.clear(Shared.Cached.Accessories)
+            table.clear(Tables.OwnedAccessory)
+            local processed = {}
+            for _, item in ipairs(data) do
+                Shared.Cached.Accessories[item.name] = item.quantity
+                if (item.enchantLevel or 0) < 10 and not processed[item.name] then
+                    table.insert(Tables.OwnedAccessory, item.name)
+                    processed[item.name] = true
+                end
+            end
+            table.sort(Tables.OwnedAccessory)
+        elseif category == "Sword" or category == "Melee" then
+            Shared.Cached.RawWeapCache[category] = data or {}
+            table.clear(Tables.OwnedWeapon)
+            local processed = {}
+            for _, cat in pairs({"Sword","Melee"}) do
+                for _, item in ipairs(Shared.Cached.RawWeapCache[cat]) do
+                    if (item.blessingLevel or 0) < 10 and not processed[item.name] then
+                        table.insert(Tables.OwnedWeapon, item.name)
+                        processed[item.name] = true
+                    end
+                end
+            end
+            table.sort(Tables.OwnedWeapon)
+            table.clear(Tables.AllOwnedWeapons)
+            local allProcessed = {}
+            for _, cat in pairs({"Sword","Melee"}) do
+                for _, item in ipairs(Shared.Cached.RawWeapCache[cat]) do
+                    if not allProcessed[item.name] then
+                        table.insert(Tables.AllOwnedWeapons, item.name)
+                        allProcessed[item.name] = true
+                    end
+                end
+            end
+            table.sort(Tables.AllOwnedWeapons)
+        end
+    end)
+end
+
+if Remotes.HakiStateUpdate then
+    Remotes.HakiStateUpdate.OnClientEvent:Connect(function(arg1, arg2)
+        if arg1 == false then Shared.ArmHaki = false; return end
+        if arg1 == player then Shared.ArmHaki = arg2 end
+    end)
+end
+
+if Remotes.TitleSync then
+    Remotes.TitleSync.OnClientEvent:Connect(function(data)
+        if data and data.unlocked then Tables.UnlockedTitle = data.unlocked end
+    end)
+end
+
+if Remotes.ArtifactSync then
+    Remotes.ArtifactSync.OnClientEvent:Connect(function(data)
+        Shared.ArtifactSession.Inventory = data.Inventory
+        Shared.ArtifactSession.Dust = data.Dust
+    end)
+end
+
+if Remotes.SpecPassiveUpdate then
+    Remotes.SpecPassiveUpdate.OnClientEvent:Connect(function(data)
+        if type(Shared.Passives) ~= "table" then Shared.Passives = {} end
+        if data and data.Passives then
+            for wName, info in pairs(data.Passives) do
+                Shared.Passives[wName] = (type(info)=="table") and info or {Name=tostring(info),RolledBuffs={}}
+            end
+        end
+    end)
+end
+
+if Remotes.UpStatReroll then
+    Remotes.UpStatReroll.OnClientEvent:Connect(function(data)
+        if data and data.Stats then Shared.GemStats = data.Stats end
+    end)
+end
+
+if Remotes.UpPlayerStats then
+    Remotes.UpPlayerStats.OnClientEvent:Connect(function(data)
+        if data and data.Stats then Shared.Stats = data.Stats end
+    end)
+end
+
+if Remotes.SkillTreeUpdate then
+    Remotes.SkillTreeUpdate.OnClientEvent:Connect(function(data)
+        if data then
+            Shared.SkillTree.Nodes       = data.Nodes or {}
+            Shared.SkillTree.SkillPoints = data.SkillPoints or 0
+        end
+    end)
+end
+
+if Remotes.TradeUpdated then
+    Remotes.TradeUpdated.OnClientEvent:Connect(function(data) Shared.TradeState = data end)
+end
+
+if Remotes.StockUpdate then
+    Remotes.StockUpdate.OnClientEvent:Connect(function(itemName, stockLeft)
+        Shared.CurrentStock[itemName] = tonumber(stockLeft)
+    end)
+end
+
+if Remotes.BossUIUpdate then
+    Remotes.BossUIUpdate.OnClientEvent:Connect(function(mode, data)
+        if mode == "DamageStats" and data.stats then
+            for _, info in pairs(data.stats) do
+                if info.player and info.player:IsA("Player") then
+                    Shared.AltDamage[info.player.Name] = tonumber(info.percent) or 0
+                end
+            end
+        end
+    end)
+end
+
+PATH.Mobs.ChildRemoved:Connect(function(child)
+    if child:IsA("Model") and child.Name:lower():find("boss") then
+        table.clear(Shared.AltDamage); Shared.AltActive = false
+    end
+end)
+
+-- ============================================================
+--  BACKGROUND LOOPS (non-UI)
+-- ============================================================
+
+-- Auto Haki
+task.spawn(function()
+    while true do
+        task.wait(0.5)
+        if _G.ObserHaki and not CheckObsHaki() then
+            pcall(function() Remotes.ObserHaki:FireServer("Toggle") end)
+        end
+        if _G.ArmHakiAuto and not CheckArmHaki() then
+            pcall(function() Remotes.ArmHaki:FireServer("Toggle") end)
+            task.wait(0.5)
+        end
+        if _G.ConquerorHakiAuto then
+            pcall(function() Remotes.ConquerorHaki:FireServer("Activate") end)
+        end
+    end
+end)
+
+-- Auto Attack (nearest mob)
+task.spawn(function()
+    while task.wait(0.1) do
+        if _G.AutoAttack then
+            pcall(function()
+                local target = GetNearestMob()
+                if target then
+                    replicated.CombatSystem.Remotes.RequestHit:FireServer(target.Position)
                 end
             end)
-end
-                })
-
-Tab4:AddTextbox({
-	Name = "Auto Change Nametag (Clientside)",
-	Default = "Nametag",
-	TextDisappear = false,
-	Callback = function(Value)
-workspace.NametagChanged.Value = Value
-	end	  
-})
-
-Tab4:AddDropdown({
-	Name = "Teleport",
-	Default = "",
-	Options = {"Safe spot", "Arena",  "Default Arena", "Lobby", "Tournament", "Moai Island", "Slapple Island", "Plate"},
-	Callback = function(Value)
-if Value == "Safe spot" then
-game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = workspace.Spot.CFrame * CFrame.new(0,28,0)
-elseif Value == "Arena" then
-game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = game.workspace.Origo.CFrame * CFrame.new(0,-5,0)
-elseif Value == "Moai Island" then
-game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(215, -15.5, 0.5)
-elseif Value == "Slapple Island" then
-game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = game.workspace.Arena.island5.Union.CFrame * CFrame.new(0,3.25,0)
-elseif Value == "Plate" then
-game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = workspace.Arena.Plate.CFrame * CFrame.new(0,2,0)
-elseif Value == "Tournament" then
-game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = workspace.Battlearena.Arena.CFrame * CFrame.new(0,10,0)
-elseif Value == "Default Arena" then
-game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(120,360,-3)
-elseif Value == "Lobby" then
-game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(-800,328,-2.5)
-end
-	end    
-})
-
-Tab4:AddButton({
-	Name = "Free Emotes (Type /e emotename)",
-	Callback = function()
-Floss = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Floss, game.Players.LocalPlayer.Character.Humanoid)
-Groove = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Groove, game.Players.LocalPlayer.Character.Humanoid)
-Headless = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Headless, game.Players.LocalPlayer.Character.Humanoid)
-Helicopter = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Helicopter, game.Players.LocalPlayer.Character.Humanoid)
-Kick = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Kick, game.Players.LocalPlayer.Character.Humanoid)
-L = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.L, game.Players.LocalPlayer.Character.Humanoid)
-Laugh = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Laugh, game.Players.LocalPlayer.Character.Humanoid)
-Parker = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Parker, game.Players.LocalPlayer.Character.Humanoid)
-Spasm = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Spasm, game.Players.LocalPlayer.Character.Humanoid)
-Thriller = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Thriller, game.Players.LocalPlayer.Character.Humanoid)
-game.Players.LocalPlayer.Chatted:connect(function(msg)
-if game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-Floss = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Floss, game.Players.LocalPlayer.Character.Humanoid)
-Groove = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Groove, game.Players.LocalPlayer.Character.Humanoid)
-Headless = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Headless, game.Players.LocalPlayer.Character.Humanoid)
-Helicopter = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Helicopter, game.Players.LocalPlayer.Character.Humanoid)
-Kick = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Kick, game.Players.LocalPlayer.Character.Humanoid)
-L = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.L, game.Players.LocalPlayer.Character.Humanoid)
-Laugh = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Laugh, game.Players.LocalPlayer.Character.Humanoid)
-Parker = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Parker, game.Players.LocalPlayer.Character.Humanoid)
-Spasm = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Spasm, game.Players.LocalPlayer.Character.Humanoid)
-Thriller = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Thriller, game.Players.LocalPlayer.Character.Humanoid)
-if string.lower(msg) == "/e floss" then
-Floss:Play()
-elseif string.lower(msg) == "/e groove" then
-Groove:Play()
-elseif string.lower(msg) == "/e headless" then
-Headless:Play()
-elseif string.lower(msg) == "/e helicopter" then
-Helicopter:Play()
-elseif string.lower(msg) == "/e kick" then
-Kick:Play()
-elseif string.lower(msg) == "/e l" then
-L:Play()
-elseif string.lower(msg) == "/e laugh" then
-Laugh:Play()
-elseif string.lower(msg) == "/e parker" then
-Parker:Play()
-elseif string.lower(msg) == "/e spasm" then
-Spasm:Play()
-elseif string.lower(msg) == "/e thriller" then
-Thriller:Play()
-end
-EP = game.Players.LocalPlayer.Character.HumanoidRootPart.Position
-end
-end)
-game:GetService("RunService").Heartbeat:Connect(function()
-if EP ~= nil and game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and Floss.IsPlaying or Groove.IsPlaying or Headless.IsPlaying or Helicopter.IsPlaying or Kick.IsPlaying or L.IsPlaying or Laugh.IsPlaying or Parker.IsPlaying or Spasm.IsPlaying or Thriller.IsPlaying then
-Magnitude = (game.Players.LocalPlayer.Character.HumanoidRootPart.Position - EP).Magnitude
-if Magnitude > 1 then
-Floss:Stop(); Groove:Stop(); Headless:Stop(); Helicopter:Stop(); Kick:Stop(); L:Stop(); Laugh:Stop(); Parker:Stop(); Spasm:Stop(); Thriller:Stop()
-end
-end
-end)
-                    end    
-                })
-
-Tab4:AddDropdown({
-	Name = "Rojo Charge VFX (Will fling you if spammed)",
-	Default = "",
-	Options = {"Attack", "No Attack"},
-	Callback = function(Value)
-if Value == "Attack" then
-game:GetService("ReplicatedStorage"):WaitForChild("RojoAbility"):FireServer("Charge")
-wait(6)
-game:GetService("ReplicatedStorage"):WaitForChild("RojoAbility"):FireServer("Release", {game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame})
-elseif Value == "No Attack" then
-game:GetService("ReplicatedStorage"):WaitForChild("RojoAbility"):FireServer("Charge")
-end
-	end    
-})
-
-                Tab4:AddToggle({
-                    Name = "Spam Zombie Sound (All gloves)",
-                    Default = false,
-                    Callback = function(Value)
-ZombieSoundSpam = Value
-while ZombieSoundSpam do
-game:GetService("ReplicatedStorage").b:FireServer("ReplicateSound_Zombie")
-task.wait()
-end
-                    end    
-                })
-
-                Tab4:AddToggle({
-                    Name = "Spam Error Sound (All gloves)",
-                    Default = false,
-                    Callback = function(Value)
-ErrorSoundSpam = Value
-while ErrorSoundSpam do
-game.ReplicatedStorage.ErrorDeath:FireServer()
-task.wait()
-end
-                    end    
-                })
-
-Tab6:AddSlider({
-	Name = "Walkspeed",
-	Min = 20,
-	Max = 1000,
-	Default = 20,
-	Color = Color3.fromRGB(140, 185, 255),
-	Increment = 1,
-	ValueName = "WS",
-	Callback = function(Value)
-		game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = Value
-Walkspeed = Value
-	end    
-})
-
-Tab6:AddToggle({
-	Name = "Keep Walkspeed",
-	Default = false,
-	Callback = function(Value)
-KeepWalkspeed = Value
-            while KeepWalkspeed do
-                if game.Players.LocalPlayer.Character:FindFirstChild("Humanoid") ~= nil and game.Players.LocalPlayer.Character.Humanoid.WalkSpeed ~= Walkspeed then
-                    game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = Walkspeed
-                end
-task.wait()
-            end
-	end    
-})
-
-Tab6:AddSlider({
-	Name = "Jumppower",
-	Min = 50,
-	Max = 1000,
-	Default = 50,
-	Color = Color3.fromRGB(255, 185, 140),
-	Increment = 1,
-	ValueName = "JP",
-	Callback = function(Value)
-		game.Players.LocalPlayer.Character.Humanoid.JumpPower = Value
-Jumppower = Value
-	end    
-})
-
-Tab6:AddToggle({
-	Name = "Keep Jumppower",
-	Default = false,
-	Callback = function(Value)
-KeepJumppower = Value
-            while KeepJumppower do
-                if game.Players.LocalPlayer.Character:FindFirstChild("Humanoid") ~= nil and game.Players.LocalPlayer.Character.Humanoid.WalkSpeed ~= Jumppower then
-                    game.Players.LocalPlayer.Character.Humanoid.JumpPower = Jumppower
-                end
-task.wait()
-            end
-	end    
-})
-
-Tab5:AddButton({
-	Name = "Get Elude",
-	Callback = function()
-local teleportFunc = queueonteleport or queue_on_teleport or syn and syn.queue_on_teleport
-if teleportFunc then
-    teleportFunc([[
-        if not game:IsLoaded() then
-            game.Loaded:Wait()
         end
-        repeat wait() until game.Players.LocalPlayer
-        game:GetService("RunService").RenderStepped:Connect(function()
-           game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(-502.336, 14.228, -179.597)
-        end)
-game:GetService("TeleportService"):Teleport(6403373529)
-    ]])
-end
-game:GetService("TeleportService"):Teleport(11828384869)
-  	end    
-})
-
-Tab5:AddLabel("When in the elude maze there is a counter feature")
-
-Tab5:AddButton({
-	Name = "Get Chain (Needs 1k slaps)",
-	Callback = function()
-if game.Players.LocalPlayer.leaderstats.Slaps.Value >= 1000 then
-local teleportFunc = queueonteleport or queue_on_teleport or syn and syn.queue_on_teleport
-if teleportFunc then
-    teleportFunc([[
-        if not game:IsLoaded() then
-            game.Loaded:Wait()
-        end
-        repeat wait() until game.Players.LocalPlayer
- repeat wait() until game.Workspace:FindFirstChild("Map"):FindFirstChild("CodeBrick")
-if game.Workspace.Map.CodeBrick.SurfaceGui:FindFirstChild("IMGTemplate") then
-game.Workspace.Map.CodeBrick.SurfaceGui.IMGTemplate.Name = "1st"
-game.Workspace.Map.CodeBrick.SurfaceGui.IMGTemplate.Name = "2nd"
-game.Workspace.Map.CodeBrick.SurfaceGui.IMGTemplate.Name = "3rd"
-game.Workspace.Map.CodeBrick.SurfaceGui.IMGTemplate.Name = "4th"
-end
-for i,v in pairs(game.Workspace.Map.CodeBrick.SurfaceGui:GetChildren()) do
-                    if v.Name == "1st" then
-                        if v.Image == "http://www.roblox.com/asset/?id=9648769161" then
-                    first = "4"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648765536" then
-                    first = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648762863" then
-                    first = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648759883" then
-                    first = "9"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648755440" then
-                    first = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648752438" then
-                    first = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648749145" then
-                    first = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648745618" then
-                    first = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648742013" then
-                    first = "7"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648738553" then
-                    first = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648734698" then
-                    first = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648730082" then
-                    first = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648723237" then
-                    first = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648718450" then
-                    first = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648715920" then
-                    first = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648712563" then
-                    first = "2"
-                end
-                    end
-                end
-for i,v in pairs(game.Workspace.Map.CodeBrick.SurfaceGui:GetChildren()) do
-                    if v.Name == "2nd" then
-                        if v.Image == "http://www.roblox.com/asset/?id=9648769161" then
-                    second = "4"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648765536" then
-                    second = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648762863" then
-                    second = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648759883" then
-                    second = "9"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648755440" then
-                    second = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648752438" then
-                    second = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648749145" then
-                    second = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648745618" then
-                    second = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648742013" then
-                    second = "7"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648738553" then
-                    second = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648734698" then
-                    second = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648730082" then
-                    second = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648723237" then
-                    second = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648718450" then
-                    second = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648715920" then
-                    second = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648712563" then
-                    second = "2"
-                end
-                    end
-                end
-for i,v in pairs(game.Workspace.Map.CodeBrick.SurfaceGui:GetChildren()) do
-                    if v.Name == "3rd" then
-                        if v.Image == "http://www.roblox.com/asset/?id=9648769161" then
-                    third = "4"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648765536" then
-                    third = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648762863" then
-                    third = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648759883" then
-                    third = "9"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648755440" then
-                    third = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648752438" then
-                    third = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648749145" then
-                    third = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648745618" then
-                    third = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648742013" then
-                    third = "7"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648738553" then
-                    third = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648734698" then
-                    third = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648730082" then
-                    third = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648723237" then
-                    third = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648718450" then
-                    third = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648715920" then
-                    third = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648712563" then
-                    third = "2"
-                end
-                    end
-                end
-for i,v in pairs(game.Workspace.Map.CodeBrick.SurfaceGui:GetChildren()) do
-                    if v.Name == "4th" then
-                        if v.Image == "http://www.roblox.com/asset/?id=9648769161" then
-                    fourth = "4"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648765536" then
-                    fourth = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648762863" then
-                    fourth = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648759883" then
-                    fourth = "9"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648755440" then
-                    fourth = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648752438" then
-                    fourth = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648749145" then
-                    fourth = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648745618" then
-                    fourth = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648742013" then
-                    fourth = "7"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648738553" then
-                    fourth = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648734698" then
-                    fourth = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648730082" then
-                    fourth = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648723237" then
-                    fourth = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648718450" then
-                    fourth = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648715920" then
-                    fourth = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648712563" then
-                    fourth = "2"
-                end
-                    end
-                end
-fireclickdetector(game.Workspace.Map.OriginOffice.Door.Keypad.Buttons.Reset.ClickDetector)
-wait(0.25)
-fireclickdetector(game.Workspace.Map.OriginOffice.Door.Keypad.Buttons[first].ClickDetector)
-wait(0.25)
-fireclickdetector(game.Workspace.Map.OriginOffice.Door.Keypad.Buttons[second].ClickDetector)
-wait(0.25)
-fireclickdetector(game.Workspace.Map.OriginOffice.Door.Keypad.Buttons[third].ClickDetector)
-wait(0.25)
-fireclickdetector(game.Workspace.Map.OriginOffice.Door.Keypad.Buttons[fourth].ClickDetector)
-wait(0.25)
-fireclickdetector(game.Workspace.Map.OriginOffice.Door.Keypad.Buttons.Enter.ClickDetector)
-game:GetService("TeleportService"):Teleport(6403373529)
-    ]])
-end
-game:GetService("TeleportService"):Teleport(9431156611)
-end
-  	end    
-})
-
-Tab5:AddButton({
-	Name = "Get Tycoon",
-	Callback = function()
-      		repeat task.wait()
-game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = workspace.Arena.Plate.CFrame * CFrame.new(0,-2,0) * CFrame.Angles(math.rad(90), math.rad(0), math.rad(0))
-until game.Players.LocalPlayer.PlayerGui.PlateIndicator.TextLabel.Text == "Plate Counter: 600"
-                    end    
-                })
-
-Tab5:AddButton({
-                    Name = "Get [REDACTED] (Needs 5k slaps)",
-Callback = function()
-if game.Players.LocalPlayer.leaderstats.Slaps.Value >= 5000 then
-Door = 0
-for i = 1, 10 do
-Door = Door + 1
-        if game:GetService("BadgeService"):UserHasBadgeAsync(game.Players.LocalPlayer.UserId, 2124847850) then
-        else
-        firetouchinterest(game.Players.LocalPlayer.Character:WaitForChild("Head"), workspace.PocketDimension.Doors[Door], 0)
-firetouchinterest(game.Players.LocalPlayer.Character:WaitForChild("Head"), workspace.PocketDimension.Doors[Door], 1)
-wait(3.75)
-end
-end
-else
-OrionLib:MakeNotification({Name = "Error",Content = "You need 5000+ slaps.",Image = "rbxassetid://7733658504",Time = 5})
-            end
-end
-                    })
-
-Tab5:AddToggle({
-	Name = "Jet Farm",
-	Default = false,
-	Callback = function(Value)
-Jetfarm = Value
-while Jetfarm do
-for i,v in pairs(game.Workspace:GetChildren()) do
-                    if v.Name == "JetOrb" and v:FindFirstChild("TouchInterest") then
-firetouchinterest(game.Players.LocalPlayer.Character:WaitForChild("Head"), v, 0)
-firetouchinterest(game.Players.LocalPlayer.Character:WaitForChild("Head"), v, 1)
-                    end
-                end
-task.wait()
-end
-	end    
-})
-
-Tab5:AddToggle({
-	Name = "Phase Farm",
-	Default = false,
-	Callback = function(Value)
-Phasefarm = Value
-while Phasefarm do
-for i,v in pairs(game.Workspace:GetChildren()) do
-                    if v.Name == "PhaseOrb" and v:FindFirstChild("TouchInterest") then
-firetouchinterest(game.Players.LocalPlayer.Character:WaitForChild("Head"), v, 0)
-firetouchinterest(game.Players.LocalPlayer.Character:WaitForChild("Head"), v, 1)
-                    end
-                end
-task.wait()
-end
-	end    
-})
-
-Tab5:AddButton({
-	Name = "Get Brazil badge",
-	Callback = function()
-game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = game.workspace.Lobby.brazil.portal.CFrame
-                    end    
-                })
-
-Tab5:AddButton({
-	Name = "Get court evidence badge",
-	Callback = function()
-fireclickdetector(game.Workspace.Lobby.Scene.knofe.ClickDetector)
-                    end    
-                })
-
-Tab5:AddButton({
-	Name = "Get duck badge",
-	Callback = function()
-fireclickdetector(game.Workspace.Arena["default island"]["Rubber Ducky"].ClickDetector)
-                    end    
-                })
-
-Tab5:AddButton({
-	Name = "Get The Lone Orange badge",
-	Callback = function()
-fireclickdetector(game.Workspace.Arena.island5.Orange.ClickDetector)
-                    end    
-                })
-
-if game.Workspace:FindFirstChild("Value") == nil then
-local NoChanged = Instance.new("BoolValue", workspace)
-NoChanged.Name = "NoChanged"
-end
-Tab3:AddToggle({
-                    Name = "Toggle All Antis",
-                    Default = false,
-                    Callback = function(Value)
-game.Workspace.NoChanged.Value = Value
-end
-})
-
-AA = Tab3:AddToggle({
-                    Name = "Anti Admins",
-                    Default = false,
-                    Callback = function(Value)
-AntiAdmins = Value
-while AntiAdmins do
-for i,v in pairs(game.Players:GetChildren()) do
-                    if v:GetRankInGroup(9950771) >= 2 then
-AntiKick = false
-                        game.Players.LocalPlayer:Kick("High Rank Player Detected.".." ("..v.Name..")")
-                        break
-                    end
-                end
-task.wait()
-end
-end
-})
-
-AK = Tab3:AddToggle({
-                    Name = "Anti Kick",
-                    Default = false,
-                    Callback = function(Value)
-AntiKick = Value
-while AntiKick do
-for i,v in pairs(game.CoreGui.RobloxPromptGui.promptOverlay:GetDescendants()) do
-                    if v.Name == "ErrorPrompt" then
-AK:Set(false)
-game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, game.JobId, game.Players.LocalPlayer)
-                    end
-                end
-task.wait()
-end
-end
-})
-
-APL = Tab3:AddToggle({
-                    Name = "Anti Portal",
-                    Default = false,
-                    Callback = function(Value)
-AntiPortal = Value
-if AntiPortal == true then
-workspace.Lobby.Teleport2.CanTouch = false
-workspace.Lobby.Teleport3.CanTouch = false
-workspace.Lobby.Teleport4.CanTouch = false
-workspace.Lobby.Teleport6.CanTouch = false
-else
-workspace.Lobby.Teleport2.CanTouch = true
-workspace.Lobby.Teleport3.CanTouch = true
-workspace.Lobby.Teleport4.CanTouch = true
-workspace.Lobby.Teleport6.CanTouch = true
-end
-end
-})
-
-AR = Tab3:AddToggle({
-                    Name = "Anti Ragdoll (This will reset your character)",
-                    Default = false,
-                    Callback = function(Value)
-AntiRagdoll = Value
-if AntiRagdoll then
-game.Players.LocalPlayer.Character.Humanoid.Health = 0
-game.Players.LocalPlayer.CharacterAdded:Connect(function()
-game.Players.LocalPlayer.Character:WaitForChild("Ragdolled").Changed:Connect(function()
-if game.Players.LocalPlayer.Character:WaitForChild("Ragdolled").Value == true and AntiRagdoll then
-repeat task.wait() game.Players.LocalPlayer.Character.Torso.Anchored = true
-until game.Players.LocalPlayer.Character:WaitForChild("Ragdolled").Value == false
-game.Players.LocalPlayer.Character.Torso.Anchored = false
-end
-end)
-end)
-end
-                    end    
-                })
-
-game.Workspace.dedBarrier.Position =  Vector3.new(15, -17, 41.5)
-AV = Tab3:AddToggle({
-                    Name = "Anti Void (Works in tournament)",
-                    Default = false,
-                    Callback = function(Value)
-game.Workspace.dedBarrier.CanCollide = Value
-game.Workspace.TAntiVoid.CanCollide = Value
-                    end    
-                })
-
-ADB = Tab3:AddToggle({
-                    Name = "Anti Death Barriers",
-                    Default = false,
-                    Callback = function(Value)
-if Value == true then
-for i,v in pairs(game.Workspace.DEATHBARRIER:GetChildren()) do
-                    if v.ClassName == "Part" and v.Name == "BLOCK" then
-                        v.CanTouch = false
-                    end
-                end
-workspace.DEATHBARRIER.CanTouch = false
-workspace.DEATHBARRIER2.CanTouch = false
-workspace.dedBarrier.CanTouch = false
-workspace.ArenaBarrier.CanTouch = false
-workspace.AntiDefaultArena.CanTouch = false
-else
-for i,v in pairs(game.Workspace.DEATHBARRIER:GetChildren()) do
-                    if v.ClassName == "Part" and v.Name == "BLOCK" then
-                        v.CanTouch = true
-                    end
-                end
-workspace.DEATHBARRIER.CanTouch = true
-workspace.DEATHBARRIER2.CanTouch = true
-workspace.dedBarrier.CanTouch = true
-workspace.ArenaBarrier.CanTouch = true
-workspace.AntiDefaultArena.CanTouch = true
-end
-                    end    
-                })
-
-AB = Tab3:AddToggle({
-                    Name = "Anti Brazil",
-                    Default = false,
-                    Callback = function(Value)
-if Value == true then
-for i,v in pairs(game.Workspace.Lobby.brazil:GetChildren()) do
-                        v.CanTouch = false
-                end
-else
-for i,v in pairs(game.Workspace.Lobby.brazil:GetChildren()) do
-                        v.CanTouch = true
-                end
-end
-                    end    
-                })
-
-ACOD = Tab3:AddToggle({
-                    Name = "Anti Cube of Death",
-                    Default = false,
-                    Callback = function(Value)
-if Value == true then
-        workspace.Arena.CubeOfDeathArea["the cube of death(i heard it kills)"].CanTouch = false
-        else
-                workspace.Arena.CubeOfDeathArea["the cube of death(i heard it kills)"].CanTouch = true
-        end
-                    end    
-                })
-
-AN = Tab3:AddToggle({
-                    Name = "Anti Null",
-                    Default = false,
-                    Callback = function(Value)
-AntiNull = Value
-while AntiNull do
-for i,v in pairs(game.Workspace:GetChildren()) do
-                    if v.Name == "Imp" and v:FindFirstChild("Body") then
-game.ReplicatedStorage.KSHit:FireServer(v.Body,true)
-end
-end
-task.wait()
-end
-                    end    
-                })
-
-AREC = Tab3:AddToggle({
-                    Name = "Anti Record (Detects chat msgs)",
-                    Default = false,
-                    Callback = function(Value)
-AntiRecord = Value
-end
-})
-for i,p in pairs(game.Players:GetChildren()) do
-if p ~= game.Players.LocalPlayer then
-p.Chatted:Connect(function(message)
-Words = message:split(" ")
-if AntiRecord == true then
-for i, v in pairs(Words) do
-if v:lower():match("recording") or v:lower():match(" rec") or v:lower():match("record") or v:lower():match("discor") or v:lower():match(" disco") or v:lower():match(" disc") or v:lower():match("ticket") or v:lower():match("tickets") or v:lower():match(" ds") or v:lower():match(" dc") or v:lower():match("dizzy") or v:lower():match("dizzycord") or v:lower():match(" clip") or v:lower():match("proof") or v:lower():match("evidence") then
-AK:Set(false)
-game.Players.LocalPlayer:Kick("Possible player recording detected.".." ("..p.Name..")".." ("..message..")")
-end
-end
-end
-end)
-end
-end
-game.Players.PlayerAdded:Connect(function(Player)
-Player.Chatted:Connect(function(message)
-Words = message:split(" ")
-if AntiRecord == true then
-for i, v in pairs(Words) do
-if v:lower():match("recording") or v:lower():match(" rec") or v:lower():match("record") or v:lower():match("discor") or v:lower():match(" disco") or v:lower():match(" disc") or v:lower():match("ticket") or v:lower():match("tickets") or v:lower():match(" ds") or v:lower():match(" dc") or v:lower():match("dizzy") or v:lower():match("dizzycord") or v:lower():match(" clip") or v:lower():match("proof") or v:lower():match("evidence") then
-AK:Set(false)
-game.Players.LocalPlayer:Kick("Possible player recording detected.".." ("..Player.Name..")".." ("..message..")")
-end
-end
-end
-end)
-end)
-
-game.Workspace.NoChanged.Changed:Connect(function()
-AA:Set(game.Workspace.NoChanged.Value)
-end)
-
-game.Workspace.NoChanged.Changed:Connect(function()
-wait(.05)
-AK:Set(game.Workspace.NoChanged.Value)
-end)
-
-game.Workspace.NoChanged.Changed:Connect(function()
-wait(.1)
-APL:Set(game.Workspace.NoChanged.Value)
-end)
-
-game.Workspace.NoChanged.Changed:Connect(function()
-wait(.15)
-AR:Set(game.Workspace.NoChanged.Value)
-end)
-
-game.Workspace.NoChanged.Changed:Connect(function()
-wait(.2)
-AV:Set(game.Workspace.NoChanged.Value)
-end)
-
-game.Workspace.NoChanged.Changed:Connect(function()
-wait(.25)
-ADB:Set(game.Workspace.NoChanged.Value)
-end)
-
-game.Workspace.NoChanged.Changed:Connect(function()
-wait(.3)
-AB:Set(game.Workspace.NoChanged.Value)
-end)
-
-game.Workspace.NoChanged.Changed:Connect(function()
-wait(.35)
-ACOD:Set(game.Workspace.NoChanged.Value)
-end)
-
-game.Workspace.NoChanged.Changed:Connect(function()
-wait(.4)
-AN:Set(game.Workspace.NoChanged.Value)
-end)
-
-game.Workspace.NoChanged.Changed:Connect(function()
-wait(.45)
-AREC:Set(game.Workspace.NoChanged.Value)
-end)
-
-elseif game.PlaceId == 11828384869 then
-                
-                local Window = OrionLib:MakeWindow({Name = "Slap Battles hub that exists | Elude Maze", HidePremium = true, IntroEnabled = false, SaveConfig = false, ConfigFolder = "OrionTest"})
-
-                local Tab = Window:MakeTab({
-                    Name = "Home",
-                    Icon = "http://www.roblox.com/asset/?id=4370345144",
-                    PremiumOnly = false
-                })
- 
-                local Tab2 = Window:MakeTab({
-                    Name = "Misc",
-                    Icon = "http://www.roblox.com/asset/?id=4370318685",
-                    PremiumOnly = false
-                })
-
-                local Tab3 = Window:MakeTab({
-                    Name = "Badges",
-                    Icon = "http://www.roblox.com/asset/?id=7733673987",
-                    PremiumOnly = false
-                })
-
-                local Tab4 = Window:MakeTab({
-                    Name = "Player",
-                    Icon = "http://www.roblox.com/asset/?id=4335489011",
-                    PremiumOnly = false
-                })
-
-Tab:AddLabel("Message Guy that exists#1915 if you have issues")
-
-Tab:AddButton({
-	Name = "Infinite Yield",
-	Callback = function()
-      		loadstring(game:HttpGet('https://raw.githubusercontent.com/ionlyusegithubformcmods/1-Line-Scripts/main/Infinite%20Yield%20but%20with%20secure%20dex'))()
-  	end    
-})
-
-Tab:AddButton({
-	Name = "Destroy GUI",
-	Callback = function()
-      		OrionLib:Destroy()
-  	end    
-})
-
-Tab2:AddButton({
-	Name = "View Testing Server (Good for glove leaking)",
-	Callback = function()
-local teleportFunc = queueonteleport or queue_on_teleport or syn and syn.queue_on_teleport
-if teleportFunc then
-    teleportFunc([[
-        if not game:IsLoaded() then
-            game.Loaded:Wait()
-        end
-        repeat wait() until game.Players.LocalPlayer
-        game:GetService("RunService").RenderStepped:Connect(function()
-            game:GetService("GuiService"):ClearError()
-game.CoreGui:WaitForChild("RobloxLoadingGUI"):Destroy()
-        end)
-loadstring(game:HttpGet(("https://raw.githubusercontent.com/ionlyusegithubformcmods/1-Line-Scripts/main/Slap%20Battles")))()
-    ]])
-end
-game:GetService("TeleportService"):Teleport(9020359053)
-                    end    
-                })
-
-Tab2:AddButton({
-	Name = "View Slap Royale Testing Server",
-	Callback = function()
-local teleportFunc = queueonteleport or queue_on_teleport or syn and syn.queue_on_teleport
-if teleportFunc then
-    teleportFunc([[
-        if not game:IsLoaded() then
-            game.Loaded:Wait()
-        end
-        repeat wait() until game.Players.LocalPlayer
-        game:GetService("RunService").RenderStepped:Connect(function()
-            game:GetService("GuiService"):ClearError()
-game.CoreGui:WaitForChild("RobloxLoadingGUI"):Destroy()
-        end)
-loadstring(game:HttpGet(("https://raw.githubusercontent.com/ionlyusegithubformcmods/1-Line-Scripts/main/Slap%20Battles")))()
-    ]])
-end
-game:GetService("TeleportService"):Teleport(9412268818)
-                    end    
-                })
-
-Tab2:AddButton({
-	Name = "Fast Slapple Farm (Copies script, put in autoexec)",
-	Callback = function()
-setclipboard("loadstring(game:HttpGet('https://raw.githubusercontent.com/ionlyusegithubformcmods/1-Line-Scripts/main/Slap%20Farm'))()")
-                    end    
-                })
-
-Tab4:AddSlider({
-	Name = "Walkspeed",
-	Min = 20,
-	Max = 1000,
-	Default = 20,
-	Color = Color3.fromRGB(140, 185, 255),
-	Increment = 1,
-	ValueName = "WS",
-	Callback = function(Value)
-		game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = Value
-Walkspeed = Value
-	end    
-})
-
-Tab4:AddToggle({
-	Name = "Keep Walkspeed",
-	Default = false,
-	Callback = function(Value)
-KeepWalkspeed = Value
-            while KeepWalkspeed do
-                if game.Players.LocalPlayer.Character:FindFirstChild("Humanoid") ~= nil and game.Players.LocalPlayer.Character.Humanoid.WalkSpeed ~= Walkspeed then
-                    game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = Walkspeed
-                end
-task.wait()
-            end
-	end    
-})
-
-Tab4:AddSlider({
-	Name = "Jumppower",
-	Min = 50,
-	Max = 1000,
-	Default = 50,
-	Color = Color3.fromRGB(255, 185, 140),
-	Increment = 1,
-	ValueName = "JP",
-	Callback = function(Value)
-		game.Players.LocalPlayer.Character.Humanoid.JumpPower = Value
-Jumppower = Value
-	end    
-})
-
-Tab4:AddToggle({
-	Name = "Keep Jumppower",
-	Default = false,
-	Callback = function(Value)
-KeepJumppower = Value
-            while KeepJumppower do
-                if game.Players.LocalPlayer.Character:FindFirstChild("Humanoid") ~= nil and game.Players.LocalPlayer.Character.Humanoid.WalkSpeed ~= Jumppower then
-                    game.Players.LocalPlayer.Character.Humanoid.JumpPower = Jumppower
-                end
-task.wait()
-            end
-	end    
-})
-
-Tab3:AddButton({
-	Name = "Get Elude",
-	Callback = function()
-game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(-502.336, 14.228, -179.597)
-game:GetService("TeleportService"):Teleport(6403373529)
-  	end    
-})
-
-Tab3:AddButton({
-	Name = "Get Counter",
-	Callback = function()
-fireclickdetector(game.Workspace.CounterLever.ClickDetector)
-game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(0,100,0)
-wait(0.2)
-game.Players.LocalPlayer.Character.HumanoidRootPart.Anchored = true
-wait(121)
-for i,v in pairs(workspace.Maze:GetDescendants()) do
-if v:IsA("ClickDetector") then
-fireclickdetector(v)
-end
-end
-  	end    
-})
-
-Tab3:AddButton({
-	Name = "Get Chain (Needs 1k slaps)",
-	Callback = function()
-if game.Players.LocalPlayer.leaderstats.Slaps.Value >= 1000 then
-local teleportFunc = queueonteleport or queue_on_teleport or syn and syn.queue_on_teleport
-if teleportFunc then
-    teleportFunc([[
-        if not game:IsLoaded() then
-            game.Loaded:Wait()
-        end
-        repeat wait() until game.Players.LocalPlayer
- repeat wait() until game.Workspace:FindFirstChild("Map"):FindFirstChild("CodeBrick")
-if game.Workspace.Map.CodeBrick.SurfaceGui:FindFirstChild("IMGTemplate") then
-game.Workspace.Map.CodeBrick.SurfaceGui.IMGTemplate.Name = "1st"
-game.Workspace.Map.CodeBrick.SurfaceGui.IMGTemplate.Name = "2nd"
-game.Workspace.Map.CodeBrick.SurfaceGui.IMGTemplate.Name = "3rd"
-game.Workspace.Map.CodeBrick.SurfaceGui.IMGTemplate.Name = "4th"
-end
-for i,v in pairs(game.Workspace.Map.CodeBrick.SurfaceGui:GetChildren()) do
-                    if v.Name == "1st" then
-                        if v.Image == "http://www.roblox.com/asset/?id=9648769161" then
-                    first = "4"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648765536" then
-                    first = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648762863" then
-                    first = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648759883" then
-                    first = "9"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648755440" then
-                    first = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648752438" then
-                    first = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648749145" then
-                    first = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648745618" then
-                    first = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648742013" then
-                    first = "7"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648738553" then
-                    first = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648734698" then
-                    first = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648730082" then
-                    first = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648723237" then
-                    first = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648718450" then
-                    first = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648715920" then
-                    first = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648712563" then
-                    first = "2"
-                end
-                    end
-                end
-for i,v in pairs(game.Workspace.Map.CodeBrick.SurfaceGui:GetChildren()) do
-                    if v.Name == "2nd" then
-                        if v.Image == "http://www.roblox.com/asset/?id=9648769161" then
-                    second = "4"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648765536" then
-                    second = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648762863" then
-                    second = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648759883" then
-                    second = "9"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648755440" then
-                    second = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648752438" then
-                    second = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648749145" then
-                    second = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648745618" then
-                    second = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648742013" then
-                    second = "7"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648738553" then
-                    second = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648734698" then
-                    second = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648730082" then
-                    second = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648723237" then
-                    second = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648718450" then
-                    second = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648715920" then
-                    second = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648712563" then
-                    second = "2"
-                end
-                    end
-                end
-for i,v in pairs(game.Workspace.Map.CodeBrick.SurfaceGui:GetChildren()) do
-                    if v.Name == "3rd" then
-                        if v.Image == "http://www.roblox.com/asset/?id=9648769161" then
-                    third = "4"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648765536" then
-                    third = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648762863" then
-                    third = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648759883" then
-                    third = "9"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648755440" then
-                    third = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648752438" then
-                    third = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648749145" then
-                    third = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648745618" then
-                    third = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648742013" then
-                    third = "7"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648738553" then
-                    third = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648734698" then
-                    third = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648730082" then
-                    third = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648723237" then
-                    third = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648718450" then
-                    third = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648715920" then
-                    third = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648712563" then
-                    third = "2"
-                end
-                    end
-                end
-for i,v in pairs(game.Workspace.Map.CodeBrick.SurfaceGui:GetChildren()) do
-                    if v.Name == "4th" then
-                        if v.Image == "http://www.roblox.com/asset/?id=9648769161" then
-                    fourth = "4"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648765536" then
-                    fourth = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648762863" then
-                    fourth = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648759883" then
-                    fourth = "9"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648755440" then
-                    fourth = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648752438" then
-                    fourth = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648749145" then
-                    fourth = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648745618" then
-                    fourth = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648742013" then
-                    fourth = "7"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648738553" then
-                    fourth = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648734698" then
-                    fourth = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648730082" then
-                    fourth = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648723237" then
-                    fourth = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648718450" then
-                    fourth = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648715920" then
-                    fourth = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648712563" then
-                    fourth = "2"
-                end
-                    end
-                end
-fireclickdetector(game.Workspace.Map.OriginOffice.Door.Keypad.Buttons.Reset.ClickDetector)
-wait(0.25)
-fireclickdetector(game.Workspace.Map.OriginOffice.Door.Keypad.Buttons[first].ClickDetector)
-wait(0.25)
-fireclickdetector(game.Workspace.Map.OriginOffice.Door.Keypad.Buttons[second].ClickDetector)
-wait(0.25)
-fireclickdetector(game.Workspace.Map.OriginOffice.Door.Keypad.Buttons[third].ClickDetector)
-wait(0.25)
-fireclickdetector(game.Workspace.Map.OriginOffice.Door.Keypad.Buttons[fourth].ClickDetector)
-wait(0.25)
-fireclickdetector(game.Workspace.Map.OriginOffice.Door.Keypad.Buttons.Enter.ClickDetector)
-game:GetService("TeleportService"):Teleport(6403373529)
-    ]])
-end
-game:GetService("TeleportService"):Teleport(9431156611)
-end
-  	end    
-})
-
-elseif game.PlaceId == 9020359053 or game.PlaceId == 9412268818 then
-                
-                local Window = OrionLib:MakeWindow({Name = "Slap Battles hub that exists | Testing Server", HidePremium = true, IntroEnabled = false, SaveConfig = false, ConfigFolder = "OrionTest"})
-
-                local Tab = Window:MakeTab({
-                    Name = "Home",
-                    Icon = "http://www.roblox.com/asset/?id=4370345144",
-                    PremiumOnly = false
-                })
-
-Tab:AddButton({
-	Name = "Testing Server Freecam",
-	Callback = function()
-loadstring(game:HttpGet("https://raw.githubusercontent.com/ionlyusegithubformcmods/1-Line-Scripts/main/SB%20Freecam"))()
-                    end    
-                })
-
-Tab:AddButton({
-	Name = "Testing Server Freecam (Mobile)",
-	Callback = function()
-loadstring(game:HttpGet("https://raw.githubusercontent.com/0Ben1/fe/main/Freecam", true))()
-                    end    
-                })
-
-Tab:AddButton({
-	Name = "Infinite Yield",
-	Callback = function()
-      		loadstring(game:HttpGet('https://raw.githubusercontent.com/ionlyusegithubformcmods/1-Line-Scripts/main/Infinite%20Yield%20but%20with%20secure%20dex'))()
-  	end    
-})
-
-Tab:AddButton({
-	Name = "Rejoin Server",
-	Callback = function()
-      		local teleportFunc = queueonteleport or queue_on_teleport or syn and syn.queue_on_teleport
-if teleportFunc then
-    teleportFunc([[
-        if not game:IsLoaded() then
-            game.Loaded:Wait()
-        end
-        repeat wait() until game.Players.LocalPlayer
-        game:GetService("RunService").RenderStepped:Connect(function()
-            game:GetService("GuiService"):ClearError()
-        end)
-loadstring(game:HttpGet(("https://raw.githubusercontent.com/ionlyusegithubformcmods/1-Line-Scripts/main/Slap%20Battles")))()
-    ]])
-end
-game:GetService("TeleportService"):Teleport(game.PlaceId)
-  	end    
-})
-
-Tab:AddButton({
-	Name = "TP back to Slap Battles",
-	Callback = function()
-      		game:GetService("TeleportService"):Teleport(6403373529)
-  	end    
-})
-
-else
-                
-if workspace:FindFirstChild("VoidPart") == nil then
-local VoidPart = Instance.new("Part", workspace)
-VoidPart.Position = Vector3.new(0,-50026.5,0)
-VoidPart.Name = "VoidPart"
-VoidPart.Size = Vector3.new(2048,50,2048)
-VoidPart.Anchored = true
-VoidPart.Transparency = 1
-VoidPart.CanCollide = false
-end
-
-                local Window = OrionLib:MakeWindow({Name = "Slap Battles hub that exists", HidePremium = true, IntroEnabled = false, SaveConfig = false, ConfigFolder = "OrionTest"})
-
-                local Tab = Window:MakeTab({
-                    Name = "Home",
-                    Icon = "http://www.roblox.com/asset/?id=4370345144",
-                    PremiumOnly = false
-                })
-
-                local Tab2 = Window:MakeTab({
-                    Name = "Combat",
-                    Icon = "http://www.roblox.com/asset/?id=7733674079",
-                    PremiumOnly = false
-                })
-
-                local Tab3 = Window:MakeTab({
-                    Name = "Antis",
-                    Icon = "http://www.roblox.com/asset/?id=7734056608",
-                    PremiumOnly = false
-                })
-
-                local Tab4 = Window:MakeTab({
-                    Name = "Misc",
-                    Icon = "http://www.roblox.com/asset/?id=4370318685",
-                    PremiumOnly = false
-                })
-
-                local Tab5 = Window:MakeTab({
-                    Name = "Gloves",
-                    Icon = "http://www.roblox.com/asset/?id=7733955740",
-                    PremiumOnly = false
-                })
-
-                local Tab6 = Window:MakeTab({
-                    Name = "Badges",
-                    Icon = "http://www.roblox.com/asset/?id=7733673987",
-                    PremiumOnly = false
-                })
-
-                local Tab7 = Window:MakeTab({
-                    Name = "Player",
-                    Icon = "http://www.roblox.com/asset/?id=4335489011",
-                    PremiumOnly = false
-                })
-
-Tab:AddLabel("Message Guy that exists#1915 if you have issues")
-
-Tab:AddButton({
-	Name = "Infinite Yield",
-	Callback = function()
-      		loadstring(game:HttpGet('https://raw.githubusercontent.com/ionlyusegithubformcmods/1-Line-Scripts/main/Infinite%20Yield%20but%20with%20secure%20dex'))()
-  	end    
-})
-
-Tab:AddButton({
-	Name = "Rejoin Server",
-	Callback = function()
-      		game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, game.JobId, game.Players.LocalPlayer)
-  	end    
-})
-
-Tab:AddButton({
-	Name = "Destroy GUI",
-	Callback = function()
-      		OrionLib:Destroy()
-  	end    
-})
-
-Tab4:AddButton({
-	Name = "View Testing Server (Good for glove leaking)",
-	Callback = function()
-local teleportFunc = queueonteleport or queue_on_teleport or syn and syn.queue_on_teleport
-if teleportFunc then
-    teleportFunc([[
-        if not game:IsLoaded() then
-            game.Loaded:Wait()
-        end
-        repeat wait() until game.Players.LocalPlayer
-        game:GetService("RunService").RenderStepped:Connect(function()
-            game:GetService("GuiService"):ClearError()
-game.CoreGui:WaitForChild("RobloxLoadingGUI"):Destroy()
-        end)
-loadstring(game:HttpGet(("https://raw.githubusercontent.com/ionlyusegithubformcmods/1-Line-Scripts/main/Slap%20Battles")))()
-    ]])
-end
-game:GetService("TeleportService"):Teleport(9020359053)
-                    end    
-                })
-
-Tab4:AddButton({
-	Name = "View Slap Royale Testing Server",
-	Callback = function()
-local teleportFunc = queueonteleport or queue_on_teleport or syn and syn.queue_on_teleport
-if teleportFunc then
-    teleportFunc([[
-        if not game:IsLoaded() then
-            game.Loaded:Wait()
-        end
-        repeat wait() until game.Players.LocalPlayer
-        game:GetService("RunService").RenderStepped:Connect(function()
-            game:GetService("GuiService"):ClearError()
-game.CoreGui:WaitForChild("RobloxLoadingGUI"):Destroy()
-        end)
-loadstring(game:HttpGet(("https://raw.githubusercontent.com/ionlyusegithubformcmods/1-Line-Scripts/main/Slap%20Battles")))()
-    ]])
-end
-game:GetService("TeleportService"):Teleport(9412268818)
-                    end    
-                })
-
-Tab4:AddButton({
-	Name = "Fast Slapple Farm (Copies script, put in autoexec)",
-	Callback = function()
-setclipboard("loadstring(game:HttpGet('https://raw.githubusercontent.com/ionlyusegithubformcmods/1-Line-Scripts/main/Slap%20Farm'))()")
-                    end    
-                })
-
-Tab4:AddToggle({
-                    Name = "Slapple Farm (Only works in arena)",
-                    Default = false,
-                    Callback = function(Value)
-SlappleFarm = Value
-while SlappleFarm do
-for i, v in ipairs(workspace.Arena.island5.Slapples:GetDescendants()) do
-                if game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and game.Players.LocalPlayer.Character:FindFirstChild("entered") and v.Name == "Glove" and v:FindFirstChildWhichIsA("TouchTransmitter") then
-                    firetouchinterest(game.Players.LocalPlayer.Character.HumanoidRootPart, v, 0)
-        firetouchinterest(game.Players.LocalPlayer.Character.HumanoidRootPart, v, 1)
-                end
-            end
-task.wait()
-end
-end
-                })
-
-Tab2:AddToggle({
-                    Name = "Slap Aura",
-                    Default = false,
-                    Callback = function(Value)
-SlapAura = Value
-                while SlapAura do
-for i,v in pairs(game.Players:GetChildren()) do
-                    if v ~= game.Players.LocalPlayer and game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and v.Character then
-if v.Character:FindFirstChild("entered") and v.Character:FindFirstChild("HumanoidRootPart") and v.Character:FindFirstChild("rock") == nil and v.Character.HumanoidRootPart.BrickColor ~= BrickColor.new("New Yeller") then
-if v.Character.Head:FindFirstChild("UnoReverseCard") == nil or game.Players.LocalPlayer.leaderstats.Glove.Value == "Error" then
-Magnitude = (game.Players.LocalPlayer.Character.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).Magnitude
-                        if 25 >= Magnitude then
-shared.gloveHits[game.Players.LocalPlayer.leaderstats.Glove.Value]:FireServer(v.Character:WaitForChild("HumanoidRootPart"),true)
-                    end
-end
-end
-end
-                end
-task.wait()
-end
-end
-                })
-
-Tab2:AddDropdown({
-	Name = "Godmode (Resets character) (Breaks killstreak)",
-	Default = "",
-	Options = {"Godmode", "Godmode + Invisibility"},
-	Callback = function(Value)
-if Value == "Godmode" then
-if game.Players.LocalPlayer.Character:FindFirstChild("entered") == nil then
-firetouchinterest(game.Players.LocalPlayer.Character:WaitForChild("Head"), workspace.Lobby.Teleport1, 0)
-firetouchinterest(game.Players.LocalPlayer.Character:WaitForChild("Head"), workspace.Lobby.Teleport1, 1)
-end
-repeat task.wait() until game.Players.LocalPlayer.Character:FindFirstChildWhichIsA("Tool") or game.Players.LocalPlayer.Backpack:FindFirstChildWhichIsA("Tool")
-for i,v in pairs(game.Players.LocalPlayer.Character:GetChildren()) do
-                    if v.ClassName == "Tool" then
-                        v.Parent = game.LogService
-                    end
-                end
-for i,v in pairs(game.Players.LocalPlayer.Backpack:GetChildren()) do
-                        v.Parent = game.LogService
-                end
-game:GetService("ReplicatedStorage"):WaitForChild("HumanoidDied"):FireServer(game.Players.LocalPlayer.Character,false)
-wait(3.75)
-for i,v in pairs(game.LogService:GetChildren()) do
-                        v.Parent = game.Players.LocalPlayer.Backpack
-                end
-for i,v in pairs(game.Players.LocalPlayer.Backpack:GetChildren()) do
-                        game.Players.LocalPlayer.Character.Humanoid:EquipTool(v)
-                end 
-game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = game.workspace.Origo.CFrame * CFrame.new(0,-5,0)
-elseif Value == "Godmode + Invisibility" then
-if game.Players.LocalPlayer.leaderstats.Slaps.Value >= 666 then
-if game.Players.LocalPlayer.Character:FindFirstChild("entered") == nil then
-firetouchinterest(game.Players.LocalPlayer.Character:WaitForChild("Head"), workspace.Lobby.Teleport1, 0)
-firetouchinterest(game.Players.LocalPlayer.Character:WaitForChild("Head"), workspace.Lobby.Teleport1, 1)
-end
-repeat task.wait() until game.Players.LocalPlayer.Character:FindFirstChildWhichIsA("Tool") or game.Players.LocalPlayer.Backpack:FindFirstChildWhichIsA("Tool")
-for i,v in pairs(game.Players.LocalPlayer.Character:GetChildren()) do
-                    if v.ClassName == "Tool" then
-                        v.Parent = game.LogService
-                    end
-                end
-for i,v in pairs(game.Players.LocalPlayer.Backpack:GetChildren()) do
-                        v.Parent = game.LogService
-                end
-game:GetService("ReplicatedStorage"):WaitForChild("HumanoidDied"):FireServer(game.Players.LocalPlayer.Character,false)
-wait(3.75)
-OGlove = game.Players.LocalPlayer.leaderstats.Glove.Value
-fireclickdetector(workspace.Lobby.Ghost.ClickDetector)
-game.ReplicatedStorage.Ghostinvisibilityactivated:FireServer()
-fireclickdetector(workspace.Lobby[OGlove].ClickDetector)
-for i,v in pairs(game.LogService:GetChildren()) do
-                        v.Parent = game.Players.LocalPlayer.Backpack
-                end
-for i,v in pairs(game.Players.LocalPlayer.Backpack:GetChildren()) do
-                        game.Players.LocalPlayer.Character.Humanoid:EquipTool(v)
-                end 
-game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = game.workspace.Origo.CFrame * CFrame.new(0,-5,0)
-else
-OrionLib:MakeNotification({Name = "Error",Content = "You need 666+ slaps.",Image = "rbxassetid://7733658504",Time = 5})
-end
-end
-	end    
-})
-
-                Tab2:AddToggle({
-                    Name = "Rhythm Explosion Spam (All gloves)",
-                    Default = false,
-                    Callback = function(Value)
-RhythmSpam = Value
-while RhythmSpam do
-game:GetService("ReplicatedStorage").rhythmevent:FireServer("AoeExplosion",0)
-task.wait()
-end
-                    end    
-                })
-
-Tab2:AddToggle({
-                    Name = "Rojo Spam (All gloves)",
-                    Default = false,
-                    Callback = function(Value)
-RojoSpam = Value
-while RojoSpam do
-game:GetService("ReplicatedStorage"):WaitForChild("RojoAbility"):FireServer("Release", {game.Players[Person].Character.HumanoidRootPart.CFrame})
-task.wait()
-end
-                    end    
-                })
-
-Tab2:AddTextbox({
-	Name = "Make person use rojo spam",
-	Default = "Username",
-	TextDisappear = false,
-	Callback = function(Value)
-if Value == "Me" or Value == "me" or Value == "Username" or Value == "" then
-Person = game.Players.LocalPlayer.Name
-else
-Person = Value
-end
-	end	  
-})
-Person = game.Players.LocalPlayer.Name
-
-                Tab2:AddToggle({
-                    Name = "Null Spam (All gloves)",
-                    Default = false,
-                    Callback = function(Value)
-NullSpam = Value
-while NullSpam do
-game:GetService("ReplicatedStorage").NullAbility:FireServer()
-task.wait()
-end
-                    end    
-                })
-
-                Tab2:AddToggle({
-                    Name = "Retro Spam (All gloves)",
-                    Default = false,
-                    Callback = function(Value)
-RetroSpam = Value
-while RetroSpam do
-game:GetService("ReplicatedStorage").RetroAbility:FireServer(RetroAbility)
-task.wait()
-end
-                    end    
-                })
-
-Tab2:AddDropdown({
-	Name = "Retro Ability",
-	Default = "Rocket Launcher",
-	Options = {"Rocket Launcher", "Ban Hammer", "Bomb"},
-	Callback = function(Value)
-RetroAbility = Value
-	end    
-})
-
-                Tab2:AddToggle({
-                    Name = "Glove Ability Spam (Can work in lobby)",
-                    Default = false,
-                    Callback = function(Value)
-On = Value
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Replica" do
-game:GetService("ReplicatedStorage").Duplicate:FireServer()
-wait(5.1)
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Fort" do
-game:GetService("ReplicatedStorage").Fortlol:FireServer()
-wait(3.1)
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Home Run" do
-game:GetService("ReplicatedStorage").HomeRun:FireServer({["start"] = true})
-game:GetService("ReplicatedStorage").HomeRun:FireServer({["finished"] = true})
-task.wait()
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "🗿" do
-game:GetService("ReplicatedStorage"):WaitForChild("GeneralAbility"):FireServer(CFrame.new(math.random(-70, 63), -5.72293854, math.random(-90, 93), 0.151493087, -8.89114702e-08, 0.988458335, 1.45089563e-09, 1, 8.97272727e-08, -0.988458335, -1.21589121e-08, 0.151493087))
-wait(3.1)
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Shukuchi" do
-local players = game.Players:GetChildren()
-local RandomPlayer = players[math.random(1, #players)]
-repeat RandomPlayer = players[math.random(1, #players)] until RandomPlayer ~= game.Players.LocalPlayer and RandomPlayer.Character:FindFirstChild("rock") == nil and RandomPlayer.Character.Head:FindFirstChild("UnoReverseCard") == nil
-Target = RandomPlayer
-if game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and game.Players.LocalPlayer.Character.Head:FindFirstChild("RedEye") == nil then
-game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = Target.Character.HumanoidRootPart.CFrame
-end
-game:GetService("ReplicatedStorage").SM:FireServer(Target)
-wait(0.05)
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Slicer" do
-game:GetService("ReplicatedStorage").Slicer:FireServer("sword")
-game:GetService("ReplicatedStorage").Slicer:FireServer("slash", game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame, Vector3.new())
-wait(5.1)
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Rob" do
-game:GetService("ReplicatedStorage"):WaitForChild("rob"):FireServer()
-wait(15)
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Kraken" do
-game:GetService("ReplicatedStorage").KrakenArm:FireServer()
-wait(5)
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Psycho" do
-game:GetService("ReplicatedStorage").Psychokinesis:InvokeServer({["grabEnabled"] = true})
-task.wait()
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Killstreak" do
-game:GetService("ReplicatedStorage").KSABILI:FireServer()
-wait(6.1)
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Bus" do
-game:GetService("ReplicatedStorage").busmoment:FireServer()
-wait(5.1)
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Mitten" do
-game:GetService("ReplicatedStorage").MittenA:FireServer()
-wait(5.1)
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Fort" do
-game:GetService("ReplicatedStorage").Fortlol:FireServer()
-wait(3.1)
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Defense" do
-game:GetService("ReplicatedStorage").Barrier:FireServer()
-wait(0.25)
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Bomb" do
-game:GetService("ReplicatedStorage").BombThrow:FireServer()
-wait(2.5)
-game:GetService("ReplicatedStorage").BombThrow:FireServer()
-wait(4.1)
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Replica" do
-game:GetService("ReplicatedStorage").Duplicate:FireServer()
-wait(5.1)
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Pusher" do
-game:GetService("ReplicatedStorage").PusherWall:FireServer()
-wait(5.1)
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Jet" do
-local players = game.Players:GetChildren()
-local RandomPlayer = players[math.random(1, #players)]
-repeat RandomPlayer = players[math.random(1, #players)] until RandomPlayer ~= game.Players.LocalPlayer and RandomPlayer.Character:FindFirstChild("entered") and RandomPlayer.Character:FindFirstChild("rock") == nil
-Target = RandomPlayer
-game:GetService("ReplicatedStorage").AirStrike:FireServer(Target.Character)
-wait(5.1)
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Tableflip" do
-game:GetService("ReplicatedStorage").GeneralAbility:FireServer()
-wait(3.1)
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Shield" do
-game:GetService("ReplicatedStorage").GeneralAbility:FireServer()
-wait(3.1)
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Rocky" do
-game:GetService("ReplicatedStorage").RockyShoot:FireServer()
-wait(6.1)
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "God's Hand" do
-game:GetService("ReplicatedStorage").TimestopJump:FireServer()
-game:GetService("ReplicatedStorage").Timestopchoir:FireServer()
-game:GetService("ReplicatedStorage").Timestop:FireServer()
-wait(50.1)
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Za Hando" do
-game:GetService("ReplicatedStorage").Erase:FireServer()
-wait(5.1)
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Baller" do
-game:GetService("ReplicatedStorage").GeneralAbility:FireServer()
-wait(4.1)
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Glitch" do
-game:GetService("ReplicatedStorage").GeneralAbility:FireServer()
-wait(4.1)
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Stun" do
-game.ReplicatedStorage.StunR:FireServer(game.Players.LocalPlayer.Character.Stun)
-wait(10.1)
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "STOP" do
-game:GetService("ReplicatedStorage").STOP:FireServer(true)
-wait(4.1)
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Track" do
-local players = game.Players:GetChildren()
-local RandomPlayer = players[math.random(1, #players)]
-repeat RandomPlayer = players[math.random(1, #players)] until RandomPlayer ~= game.Players.LocalPlayer
-repeat RandomPlayer = players[math.random(1, #players)] until RandomPlayer ~= game.Players.LocalPlayer and RandomPlayer.Character:FindFirstChild("entered") and RandomPlayer.Character:FindFirstChild("rock") == nil and RandomPlayer.Character.Head:FindFirstChild("UnoReverseCard") == nil
-Target = RandomPlayer
-game:GetService("ReplicatedStorage").GeneralAbility:FireServer(Target.Character)
-wait(10.1)
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Mail" do
-game:GetService("ReplicatedStorage").MailSend:FireServer()
-wait(3.1)
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Shard" do
-game:GetService("ReplicatedStorage").Shards:FireServer()
-wait(4.1)
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Swapper" do
-game:GetService("ReplicatedStorage").SLOC:FireServer()
-wait(5.1)
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Bubble" do
-game:GetService("ReplicatedStorage").BubbleThrow:FireServer()
-wait(3.1)
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Slapple" do
-game:GetService("ReplicatedStorage").funnyTree:FireServer(game.Players.LocalPlayer.Character.HumanoidRootPart.Position)
-wait(3.1)
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Kinetic" do
-OGL = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame
-game.Players.LocalPlayer.Character.Humanoid:UnequipTools()
-for i = 1,100 do
-game.ReplicatedStorage.SelfKnockback:FireServer({["Force"] = 0,["Direction"] = Vector3.new(0,0.01,0)})
-wait(0.05)
-end
-wait(2)
-game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = OGL
-if game.Players.LocalPlayer.Backpack:FindFirstChild("Kinetic") then
-game.Players.LocalPlayer.Character.Humanoid:EquipTool(game.Players.LocalPlayer.Backpack.Kinetic)
-end
-game:GetService("ReplicatedStorage").KineticExpl:FireServer(game.Players.LocalPlayer.Character.Kinetic, game.Players.LocalPlayer.Character.HumanoidRootPart.Position)
-game.Players.LocalPlayer.Character.Humanoid:UnequipTools()
-wait(2.2)
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Dominance" do
-game:GetService("ReplicatedStorage").DominanceAc:FireServer(game.Players.LocalPlayer.Character.HumanoidRootPart.Position)
-wait(3.1)
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "[REDACTED]" do
-game:GetService("ReplicatedStorage").Well:FireServer()
-wait(5.1)
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Duelist" do
-game:GetService("ReplicatedStorage").DuelistAbility:FireServer()
-wait(5.1)
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Engineer" do
-game:GetService("ReplicatedStorage").Sentry:FireServer()
-wait(5.1)
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Brick" do
-game:GetService("ReplicatedStorage").lbrick:FireServer()
-wait(1.1)
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Trap" do
-game:GetService("ReplicatedStorage").funnyhilariousbeartrap:FireServer()
-wait(3.1)
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "woah" do
-game:GetService("ReplicatedStorage").VineThud:FireServer()
-wait(5.1)
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Ping Pong" do
-game:GetService("ReplicatedStorage").GeneralAbility:FireServer()
-task.wait()
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Recall" do
-game:GetService("ReplicatedStorage").Recall:InvokeServer(game.Players.LocalPlayer.Character.Recall)
-wait(3.1)
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "ZZZZZZZ" do
-game:GetService("ReplicatedStorage").ZZZZZZZSleep:FireServer()
-task.wait()
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Charge" do
-game:GetService("ReplicatedStorage").GeneralAbility:FireServer(game.Players.LocalPlayer.Character.Charge)
-wait(3.1)
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Coil" do
-game:GetService("ReplicatedStorage"):WaitForChild("GeneralAbility"):FireServer(game.Players.LocalPlayer.Character.Coil)
-wait(3.1)
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Diamond" do
-game:GetService("ReplicatedStorage"):WaitForChild("Rockmode"):FireServer()
-task.wait()
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Excavator" do
-game:GetService("ReplicatedStorage"):WaitForChild("Excavator"):InvokeServer()
-game:GetService("ReplicatedStorage"):WaitForChild("ExcavatorCancel"):FireServer()
-wait(7.3)
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Thor" do
-game:GetService("ReplicatedStorage").ThorAbility:FireServer(game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame)
-task.wait()
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Quake" do
-game:GetService("ReplicatedStorage"):WaitForChild("QuakeQuake"):FireServer({["start"] = true})
-game:GetService("ReplicatedStorage"):WaitForChild("QuakeQuake"):FireServer({["finished"] = true})
-task.wait()
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Meteor" do
-game:GetService("ReplicatedStorage").GeneralAbility:FireServer()
-task.wait()
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Sun" do
-game:GetService("ReplicatedStorage").GeneralAbility:FireServer("Cast")
-task.wait()
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Reverse" do
-game:GetService("ReplicatedStorage").ReverseAbility:FireServer()
-wait(6)
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Gravity" do
-game:GetService("ReplicatedStorage").GeneralAbility:FireServer()
-task.wait()
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Whirlwind" do
-game:GetService("ReplicatedStorage").GeneralAbility:FireServer()
-task.wait()
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Guardian Angel" do
-game.ReplicatedStorage.GeneralAbility:FireServer(game.Players.LocalPlayer)
-task.wait()
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Hallow Jack" do
-game.ReplicatedStorage.Hallow:FireServer()
-wait(3.1)
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Cheeky" do
-game:GetService("ReplicatedStorage").Spherify:FireServer()
-task.wait()
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Parry" do
-game:GetService("ReplicatedStorage").GeneralAbility:FireServer()
-task.wait()
-end
-while On and game.Players.LocalPlayer.leaderstats.Glove.Value == "Druid" do
-game:GetService("ReplicatedStorage").GeneralAbility:FireServer()
-task.wait()
-end
-                    end   
-})
-
-Cancel = false
-Tab2:AddTextbox({
-	Name = "Punish player (Needs swapper) (1 plr at a time)",
-	Default = "Username",
-	TextDisappear = false,
-	Callback = function(Value)
-if game.Players.LocalPlayer.Character:FindFirstChild("Swapper") or game.Players.LocalPlayer.Backpack:FindFirstChild("Swapper") then
-OGL = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame
-game.Workspace.VoidPart.CanCollide = true
-Timer = 0
-repeat
-if Cancel == true then
-break
-end
-if workspace[Value]:FindFirstChild("HumanoidRootPart") then
-game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(workspace[Value].HumanoidRootPart.Position.X,-49999,workspace[Value].HumanoidRootPart.Position.Z)
-end
-task.wait(0.01)
-if Timer < 1 then
-Timer = Timer + 0.01
-end
-until game.Players[Value].Character and workspace[Value]:FindFirstChild("HumanoidRootPart") and workspace[Value]:FindFirstChild("entered") and workspace[Value].Ragdolled.Value == false and Timer >= 1
-if Cancel == false then
-game:GetService("ReplicatedStorage").SLOC:FireServer()
-end
-wait(.25)
-game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = OGL
-game.Workspace.VoidPart.CanCollide = false
-if game.Players.LocalPlayer.Character:FindFirstChildWhichIsA("Part",true) == nil then
-game:GetService("ReplicatedStorage"):WaitForChild("HumanoidDied"):FireServer(game.Players.LocalPlayer.Character,false)
-end
-else
-OrionLib:MakeNotification({Name = "Error",Content = "You don't have Swapper equipped, or you aren't in the arena.",Image = "rbxassetid://7733658504",Time = 5})
-end
-	end	  
-})
-
-Tab2:AddButton({
-	Name = "Cancel punish player",
-	Callback = function()
-Cancel = true
-wait(0.1)
-Cancel = false
-  	end    
-})
-
-Tab2:AddButton({
-	Name = "Kick player (Needs Za Hando) (Inconsistent)",
-	Callback = function()
-if game.Players.LocalPlayer.leaderstats.Glove.Value == "Za Hando" then
-OGL = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame
-OGWS = game.Players.LocalPlayer.Character.Humanoid.WalkSpeed
-OGJP = game.Players.LocalPlayer.Character.Humanoid.JumpPower
-for i,v in pairs(game.Workspace.Lobby.brazil:GetChildren()) do
-                        v.CanTouch = false
-                end
-game:GetService("ReplicatedStorage").Erase:FireServer()
-wait(0.47)
-game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = 0
-game.Players.LocalPlayer.Character.Humanoid.JumpPower = 0
-game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(-725,310,-2)
-wait(3.75)
-game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = OGL
-game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = OGWS
-game.Players.LocalPlayer.Character.Humanoid.JumpPower = OGJP
-for i,v in pairs(game.Workspace.Lobby.brazil:GetChildren()) do
-                        v.CanTouch = true
-                end
-else
-OrionLib:MakeNotification({Name = "Error",Content = "You don't have Za Hando equipped.",Image = "rbxassetid://7733658504",Time = 5})
-end
-                    end    
-                })
-
-Tab2:AddToggle({
-                    Name = "Auto Enter Arena",
-                    Default = false,
-                    Callback = function(Value)
-AutoEnterArena = Value
-while AutoEnterArena do
-if game.Players.LocalPlayer.Character:FindFirstChild("entered") == nil and game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-firetouchinterest(game.Players.LocalPlayer.Character:WaitForChild("Head"), workspace.Lobby.Teleport1, 0)
-firetouchinterest(game.Players.LocalPlayer.Character:WaitForChild("Head"), workspace.Lobby.Teleport1, 1)
     end
-task.wait()
-end
-end
-                })
-
-Tab2:AddToggle({
-                    Name = "Glove ESP",
-                    Default = false,
-                    Callback = function(Value)
-GloveESP = Value
-if GloveESP == false then
-for i, v in ipairs(game.Players:GetChildren()) do
-                if v.Character and v.Character:FindFirstChild("Head") and v.Character.Head:FindFirstChild("GloveEsp") then
- v.Character.Head.GloveEsp:Destroy()
-                end
-            end
-end
-while GloveESP do
-for i, v in ipairs(game.Players:GetChildren()) do
-                if v ~= game.Players.LocalPlayer and v.Character and v.Character:FindFirstChild("Head") and v.Character:FindFirstChild("entered") and v.Character.IsInDefaultArena.Value == false and v.Character.Head:FindFirstChild("GloveEsp") == nil then
-GloveEsp = Instance.new("BillboardGui", v.Character.Head)
-GloveEsp.Adornee = v.Character.Head
-GloveEsp.Name = "GloveEsp"
-GloveEsp.Size = UDim2.new(0, 100, 0, 150)
-GloveEsp.StudsOffset = Vector3.new(0, 1, 0)
-GloveEsp.AlwaysOnTop = true
-GloveEsp.StudsOffset = Vector3.new(0, 3, 0)
-GloveEspText = Instance.new("TextLabel", GloveEsp)
-GloveEspText.BackgroundTransparency = 1
-GloveEspText.Size = UDim2.new(0, 100, 0, 100)
-GloveEspText.TextSize = 25
-GloveEspText.Font = Enum.Font.SourceSansSemibold
-GloveEspText.TextColor3 = Color3.new(255, 255, 255)
-GloveEspText.TextStrokeTransparency = 0
-GloveEspText.Text = v.leaderstats.Glove.Value
-                end
-            end
-task.wait()
-end
-end
-                })
-
-Tab4:AddButton({
-	Name = "Give reaper 20 kills (Use after they slap you)",
-	Callback = function()
-for i = 1, 20 do
-        game:GetService("ReplicatedStorage"):WaitForChild("HumanoidDied"):FireServer(x,false)
-end
-for i,v in pairs(game.Players.LocalPlayer.Character:GetChildren()) do
-                    if v.Name == "DeathMark" then
-                    game.ReplicatedStorage.ReaperGone:FireServer(v)
-                    game:GetService("Lighting"):WaitForChild("DeathMarkColorCorrection"):Destroy() 
-                    end 
-                end
-                    end    
-                })
-
-if game.Workspace:FindFirstChild("NametagChanged") == nil then
-local NametagChanged = Instance.new("StringValue", workspace)
-NametagChanged.Name = "NametagChanged"
-NametagChanged.Value = ""
-end
-Tab4:AddToggle({
-                    Name = "Auto Change Nametag (Clientside)",
-                    Default = false,
-                    Callback = function(Value)
-AutoChangeNameTag = Value
-        if AutoChangeNameTag == true and game.Players.LocalPlayer.Character:FindFirstChild("Nametag",true) then
-        game.Players.LocalPlayer.Character.Head.Nametag.TextLabel.Text = workspace.NametagChanged.Value
-end
-workspace.NametagChanged.Changed:Connect(function()
-        if AutoChangeNameTag == true and game.Players.LocalPlayer.Character:FindFirstChild("Nametag",true) then
-        game.Players.LocalPlayer.Character.Head.Nametag.TextLabel.Text = workspace.NametagChanged.Value
-end
 end)
-            game.Players.LocalPlayer.CharacterAdded:Connect(function()
-                if AutoChangeNameTag == true then
-repeat task.wait() until game.Players.LocalPlayer.Character:FindFirstChild("Nametag",true)
-                game.Players.LocalPlayer.Character.Head.Nametag.TextLabel.Text = workspace.NametagChanged.Value
+
+-- Auto Haki quest (Thief kills)
+task.spawn(function()
+    while task.wait(0.1) do
+        if _G.AutoHaki then
+            local cframes = GetConnectionEnemies("Thief")
+            for _, cf in ipairs(cframes) do
+                pcall(function()
+                    replicated.CombatSystem.Remotes.RequestHit:FireServer(cf.Position)
+                end)
+            end
+        end
+    end
+end)
+
+-- Farm Best Mob loop
+task.spawn(function()
+    while task.wait(0.1) do
+        if _G.FarmLevel then FarmBestMob() end
+    end
+end)
+
+-- Farm Selected Mob loop
+task.spawn(function()
+    while task.wait(0.1) do
+        if _G.FarmSelectedMob and _G.SelectedMobType then
+            local mobCFrames = GetConnectionEnemies(_G.SelectedMobType)
+            for _, cf in ipairs(mobCFrames) do
+                pcall(function()
+                    replicated.CombatSystem.Remotes.RequestHit:FireServer(cf.Position)
+                end)
+            end
+        end
+    end
+end)
+
+-- Auto Stats loops
+task.spawn(function()
+    while task.wait(0.5) do
+        if _G.AutoStatsDefense then
+            pcall(function() replicated.RemoteEvents.AllocateStat:FireServer("Defense", 100) end)
+        end
+        if _G.AutoStatsPower then
+            pcall(function() replicated.RemoteEvents.AllocateStat:FireServer("Power", 100) end)
+        end
+        if _G.AutoStatsFruit then
+            pcall(function() replicated.RemoteEvents.AllocateStat:FireServer("Fruit", 100) end)
+        end
+    end
+end)
+
+-- Auto Skills (ability 1 & 2)
+task.spawn(function()
+    while task.wait(1) do
+        if _G.AutoSkill1 then
+            pcall(function() replicated.AbilitySystem.Remotes.RequestAbility:FireServer(1) end)
+        end
+        if _G.AutoSkill2 then
+            pcall(function() replicated.AbilitySystem.Remotes.RequestAbility:FireServer(2) end)
+        end
+    end
+end)
+
+-- Anti AFK
+task.spawn(function()
+    DisableIdled()
+    while true do
+        task.wait(60)
+        pcall(function()
+            vu:CaptureController()
+            vu:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+            task.wait(0.2)
+            vu:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+        end)
+    end
+end)
+
+-- Kill Aura loop
+task.spawn(function()
+    while task.wait(0.12) do
+        if _G.KillAura then
+            local target = GetNearestAuraTarget(_G.KillAuraRange or 200)
+            if target then
+                pcall(function() Remotes.M1:FireServer(target:GetPivot().Position) end)
+            end
+        end
+    end
+end)
+
+-- Player ESP loop
+task.spawn(function()
+    while task.wait(0.5) do
+        if _G.SailorESP then
+            for _, other in ipairs(Players:GetPlayers()) do
+                if other ~= player and other.Character then
+                    if not other.Character:FindFirstChild("SailorESP") then
+                        local hl                = Instance.new("Highlight")
+                        hl.Name                 = "SailorESP"
+                        hl.FillColor            = Color3.fromRGB(255,50,50)
+                        hl.FillTransparency     = 0.5
+                        hl.OutlineColor         = Color3.fromRGB(255,255,255)
+                        hl.DepthMode            = Enum.HighlightDepthMode.AlwaysOnTop
+                        hl.Adornee              = other.Character
+                        hl.Parent               = other.Character
+                    end
+                end
+            end
+        else
+            for _, other in ipairs(Players:GetPlayers()) do
+                if other.Character then
+                    local hl = other.Character:FindFirstChild("SailorESP")
+                    if hl then hl:Destroy() end
+                end
+            end
+        end
+    end
+end)
+
+-- Noclip loop
+task.spawn(function()
+    while RunService.Stepped:Wait() do
+        if _G.SailorNoclip then
+            local ch = player.Character
+            if ch then
+                for _, part in ipairs(ch:GetDescendants()) do
+                    if part:IsA("BasePart") then part.CanCollide = false end
+                end
+            end
+        end
+    end
+end)
+
+-- CharacterAdded: auto equip tool
+player.CharacterAdded:Connect(function(ch)
+    if _G.AutoEquipTool and _G.SelectedAutoEquipTool then
+        task.wait(0.1)
+        local tool = player.Backpack:FindFirstChild(_G.SelectedAutoEquipTool)
+        if tool then ch:WaitForChild("Humanoid"):EquipTool(tool) end
+    end
+end)
+
+-- ============================================================
+--  WINDUI WINDOW
+-- ============================================================
+Window = WindUI:CreateWindow({
+    Title      = "CattStar Sailor-Piece",
+    Icon       = "rbxassetid://84971028134779",
+    Author     = "Xeno Supported | WindUI",
+    Folder     = "CattStar_SailorPiece",
+    Size       = UDim2.fromOffset(660, 600),
+    MinSize    = Vector2.new(580, 480),
+    MaxSize    = Vector2.new(950, 800),
+    Transparent= false,
+    Theme      = "Dark",
+    Resizable  = true,
+    SideBarWidth=195,
+    ScrollBarEnabled=true,
+    User = {
+        Enabled  = true,
+        Anonymous= false,
+        Callback = function()
+            WindUI:Notify({
+                Title   = "Player Info",
+                Content = "Username: "..playerName.."\nDisplay: "..playerDisplayName,
+                Duration= 3,
+                Icon    = "user",
+            })
+        end,
+    },
+})
+
+Window:EditOpenButton({
+    Title       = "CattStar Sailor Piece",
+    Icon        = "monitor",
+    CornerRadius= UDim.new(0,16),
+    StrokeThickness=2,
+    Color = ColorSequence.new(Color3.fromHex("FF0F7B"), Color3.fromHex("F89B29")),
+    OnlyMobile  = false,
+    Enabled     = true,
+    Draggable   = true,
+})
+
+Window:SetToggleKey(Enum.KeyCode.RightShift)
+
+-- ============================================================
+--  TABS
+-- ============================================================
+local Tabs = {
+    Player    = Window:Tab({ Title="Player",    Icon="user" }),
+    Main      = Window:Tab({ Title="Main Farm", Icon="house" }),
+    Boss      = Window:Tab({ Title="Boss Farm", Icon="skull" }),
+    Dungeon   = Window:Tab({ Title="Dungeon",   Icon="flame" }),
+    Automation= Window:Tab({ Title="Automation",Icon="repeat-2" }),
+    Artifact  = Window:Tab({ Title="Artifact",  Icon="martini" }),
+    World     = Window:Tab({ Title="World",     Icon="compass" }),
+    Visuals   = Window:Tab({ Title="Visuals",   Icon="eye" }),
+    Settings  = Window:Tab({ Title="Settings",  Icon="settings" }),
+}
+
+-- ============================================================
+--  PLAYER TAB
+-- ============================================================
+local PlayerSection = Tabs.Player:Section({ Title="Character Modifiers", Box=true, Opened=true })
+
+PlayerSection:Slider({
+    Title="Walk Speed", Desc="Increase movement speed",
+    Step=1, Value={Min=16, Max=250, Default=16},
+    Callback=function(v)
+        local ch = player.Character
+        if ch and ch:FindFirstChild("Humanoid") then ch.Humanoid.WalkSpeed = v end
+    end,
+})
+
+PlayerSection:Slider({
+    Title="Jump Power", Desc="Increase jump height",
+    Step=1, Value={Min=50, Max=500, Default=50},
+    Callback=function(v)
+        local ch = player.Character
+        if ch and ch:FindFirstChild("Humanoid") then
+            ch.Humanoid.UseJumpPower = true
+            ch.Humanoid.JumpPower   = v
+        end
+    end,
+})
+
+PlayerSection:Slider({
+    Title="Gravity", Desc="Change world gravity",
+    Step=1, Value={Min=0, Max=500, Default=196},
+    Callback=function(v) workspace.Gravity = v end,
+})
+
+PlayerSection:Slider({
+    Title="Hip Height", Desc="Adjust hip height",
+    Step=1, Value={Min=0, Max=10, Default=2},
+    Callback=function(v)
+        local ch = player.Character
+        if ch and ch:FindFirstChild("Humanoid") then ch.Humanoid.HipHeight = v end
+    end,
+})
+
+PlayerSection:Toggle({
+    Title="Noclip", Desc="Walk through walls", Icon="door-open",
+    Type="Checkbox", Value=false,
+    Callback=function(state) _G.SailorNoclip = state end,
+})
+
+PlayerSection:Toggle({
+    Title="Anti AFK", Desc="Prevent idle kick", Icon="clock",
+    Type="Checkbox", Value=true,
+    Callback=function(state) _G.AntiAFK = state end,
+})
+
+PlayerSection:Toggle({
+    Title="Kill Aura", Desc="Attack nearby mobs automatically", Icon="crosshair",
+    Type="Checkbox", Value=false,
+    Callback=function(state) _G.KillAura = state end,
+})
+
+PlayerSection:Slider({
+    Title="Kill Aura Range", Desc="Range for kill aura",
+    Step=5, Value={Min=10, Max=200, Default=100},
+    Callback=function(v) _G.KillAuraRange = v end,
+})
+
+-- Auto Stats Section
+local StatsSection = Tabs.Player:Section({ Title="Auto Stats", Box=true, Opened=true })
+
+StatsSection:Toggle({
+    Title="Auto Stats Defense", Desc="Auto allocate to Defense", Icon="shield",
+    Type="Checkbox", Value=false,
+    Callback=function(state) _G.AutoStatsDefense = state end,
+})
+
+StatsSection:Toggle({
+    Title="Auto Stats Power", Desc="Auto allocate to Power", Icon="zap",
+    Type="Checkbox", Value=false,
+    Callback=function(state) _G.AutoStatsPower = state end,
+})
+
+StatsSection:Toggle({
+    Title="Auto Stats Fruit", Desc="Auto allocate to Fruit", Icon="apple",
+    Type="Checkbox", Value=false,
+    Callback=function(state) _G.AutoStatsFruit = state end,
+})
+
+do
+    local statOptions = {"Melee","Defense","Sword","Power"}
+    StatsSection:Dropdown({
+        Title="Auto Allocate Stats", Desc="Select stats to auto-allocate",
+        Values=statOptions, Value=statOptions[1], Multi=true,
+        Callback=function(selected)
+            _G.AutoAllocateStats = selected
+        end,
+    })
+    StatsSection:Toggle({
+        Title="Auto Allocate (Advanced)", Desc="Distributes stat points evenly", Icon="bar-chart",
+        Type="Checkbox", Value=false,
+        Callback=function(state)
+            _G.AutoAllocateAdvanced = state
+            if state then
+                task.spawn(function()
+                    while _G.AutoAllocateAdvanced do
+                        local pointsPath = player:FindFirstChild("Data") and player.Data:FindFirstChild("StatPoints")
+                        if pointsPath and pointsPath.Value > 0 then
+                            local selected = _G.AutoAllocateStats or {}
+                            local active = {}
+                            for statName, enabled in pairs(selected) do
+                                if enabled then table.insert(active, statName) end
+                            end
+                            if #active > 0 then
+                                local pts = math.floor(pointsPath.Value / #active)
+                                if pts > 0 then
+                                    for _, stat in ipairs(active) do
+                                        pcall(function() Remotes.AddStat:FireServer(stat, pts) end)
+                                    end
+                                end
+                            end
+                        end
+                        task.wait(1)
+                    end
+                end)
+            end
+        end,
+    })
+end
+
+-- Auto Equip Section
+local EquipSection = Tabs.Player:Section({ Title="Auto Equip Tool", Box=true, Opened=true })
+
+local toolDropdown = EquipSection:Dropdown({
+    Title="Select Tool", Desc="Choose tool to auto equip",
+    Values=GetBackpackItems(), Value=GetBackpackItems()[1] or "None",
+    Multi=false,
+    Callback=function(selected) _G.SelectedAutoEquipTool = selected end,
+})
+
+EquipSection:Button({
+    Title="Refresh Tool List", Desc="Reload from backpack",
+    Callback=function()
+        local items = GetBackpackItems()
+        toolDropdown:SetValues(items)
+        WindUI:Notify({ Title="Refreshed", Content="Tool list updated", Duration=2, Icon="refresh-cw" })
+    end,
+})
+
+EquipSection:Toggle({
+    Title="Auto Equip on Respawn", Desc="Equips selected tool on respawn", Icon="sword",
+    Type="Checkbox", Value=false,
+    Callback=function(state) _G.AutoEquipTool = state end,
+})
+
+-- Auto Use Abilities Section
+local FruitSection = Tabs.Player:Section({ Title="Auto Use Abilities", Box=true, Opened=true })
+
+FruitSection:Toggle({
+    Title="Auto Use Skill 1", Desc="Auto use first ability", Icon="sparkles",
+    Type="Checkbox", Value=false,
+    Callback=function(state) _G.AutoSkill1 = state end,
+})
+
+FruitSection:Toggle({
+    Title="Auto Use Skill 2", Desc="Auto use second ability", Icon="flame",
+    Type="Checkbox", Value=false,
+    Callback=function(state) _G.AutoSkill2 = state end,
+})
+
+-- Haki Section
+local HakiSection = Tabs.Player:Section({ Title="Haki", Box=true, Opened=true })
+
+HakiSection:Toggle({
+    Title="Auto Armament Haki", Desc="Keeps Armament Haki active", Icon="shield",
+    Type="Checkbox", Value=false,
+    Callback=function(state) _G.ArmHakiAuto = state end,
+})
+
+HakiSection:Toggle({
+    Title="Auto Observation Haki", Desc="Keeps Observation Haki active", Icon="eye",
+    Type="Checkbox", Value=false,
+    Callback=function(state) _G.ObserHaki = state end,
+})
+
+HakiSection:Toggle({
+    Title="Auto Conqueror Haki", Desc="Keeps Conqueror Haki active", Icon="crown",
+    Type="Checkbox", Value=false,
+    Callback=function(state) _G.ConquerorHakiAuto = state end,
+})
+
+-- ============================================================
+--  MAIN FARM TAB
+-- ============================================================
+local ChestSection = Tabs.Main:Section({ Title="Chest Farm", Box=true, Opened=true })
+
+local chestRarities = {"Common Chest","Rare Chest","Epic Chest","Legendary Chest","Mythic Chest"}
+
+ChestSection:Dropdown({
+    Title="Select Rarity", Values=chestRarities, Value=chestRarities[1], Multi=false,
+    Callback=function(s) _G.SelectedChestRarity = s end,
+})
+
+ChestSection:Slider({
+    Title="No. of Chests", Desc="How many chests to open",
+    Step=1, Value={Min=1, Max=100, Default=2},
+    Callback=function(v) _G.SelectedChestNumber = v end,
+})
+
+ChestSection:Button({
+    Title="Open Chest", Desc="",
+    Callback=function()
+        local ok = pcall(function()
+            replicated.Remotes.UseItem:FireServer("Use", _G.SelectedChestRarity, _G.SelectedChestNumber, false)
+        end)
+        if not ok then
+            WindUI:Notify({ Title="Error", Content="Failed to open chest!", Duration=3, Icon="alert-triangle" })
+        end
+    end,
+})
+
+-- Auto Open Chest Toggle
+ChestSection:Toggle({
+    Title="Auto Open Chests", Desc="Continuously open selected chests", Icon="box",
+    Type="Checkbox", Value=false,
+    Callback=function(state)
+        _G.AutoOpenChest = state
+        if state then
+            task.spawn(function()
+                while _G.AutoOpenChest do
+                    pcall(function()
+                        replicated.Remotes.UseItem:FireServer("Use", _G.SelectedChestRarity, 10000, false)
+                    end)
+                    task.wait(2)
                 end
             end)
-end
-                })
-
-Tab4:AddTextbox({
-	Name = "Auto Change Nametag (Clientside)",
-	Default = "Nametag",
-	TextDisappear = false,
-	Callback = function(Value)
-workspace.NametagChanged.Value = Value
-	end	  
+        end
+    end,
 })
 
-Tab4:AddButton({
-	Name = "Infinite Invisibility (Use in lobby) (Glove still visible)",
-	Callback = function()
-if game.Players.LocalPlayer.Character:FindFirstChild("entered") == nil and game.Players.LocalPlayer.leaderstats.Slaps.Value >= 666 then
-OGlove = game.Players.LocalPlayer.leaderstats.Glove.Value
-fireclickdetector(workspace.Lobby.Ghost.ClickDetector)
-game.ReplicatedStorage.Ghostinvisibilityactivated:FireServer()
-fireclickdetector(workspace.Lobby[OGlove].ClickDetector)
-else
-OrionLib:MakeNotification({Name = "Error",Content = "You need to be in lobby and have 666+ slaps.",Image = "rbxassetid://7733658504",Time = 5})
-end
-                    end    
-                })
+-- Haki Unlock Section
+local HakiUnlockSection = Tabs.Main:Section({ Title="Auto Unlock Haki", Box=true, Opened=true })
 
-Tab4:AddDropdown({
-	Name = "Teleport",
-	Default = "",
-	Options = {"Safe spot", "Arena",  "Default Arena", "Lobby", "Tournament", "Moai Island", "Slapple Island", "Plate"},
-	Callback = function(Value)
-if Value == "Safe spot" then
-game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = workspace.Spot.CFrame * CFrame.new(0,28,0)
-elseif Value == "Arena" then
-game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = game.workspace.Origo.CFrame * CFrame.new(0,-5,0)
-elseif Value == "Moai Island" then
-game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(215, -15.5, 0.5)
-elseif Value == "Slapple Island" then
-game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = game.workspace.Arena.island5.Union.CFrame * CFrame.new(0,3.25,0)
-elseif Value == "Plate" then
-game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = workspace.Arena.Plate.CFrame * CFrame.new(0,2,0)
-elseif Value == "Tournament" then
-game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = workspace.Battlearena.Arena.CFrame * CFrame.new(0,10,0)
-elseif Value == "Default Arena" then
-game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(120,360,-3)
-elseif Value == "Lobby" then
-game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(-800,328,-2.5)
-end
-	end    
+HakiUnlockSection:Toggle({
+    Title="Unlock Haki", Desc="Takes quest and kills 100 Bandits", Icon="sword",
+    Type="Checkbox", Value=false,
+    Callback=function(state)
+        _G.AutoHaki = state
+        if state then
+            pcall(function() replicated.RemoteEvents.QuestAbandon:FireServer("repeatable") end)
+            pcall(function() replicated.RemoteEvents.QuestAccept:FireServer("HakiQuestNPC") end)
+            pcall(function() replicated.Remotes.TeleportToPortal:FireServer("Starter") end)
+        end
+    end,
 })
 
-RBSF = Tab5:AddToggle({
-                    Name = "Replica & Baller Slap Farm (Equip Baller)",
-                    Default = false,
-                    Callback = function(Value)
-ReplicaBallerFarm = Value
-if game.Players.LocalPlayer.leaderstats.Glove.Value == "Baller" then
-if ReplicaBallerFarm == true then
-coroutine.wrap(SpamReplicaBaller)()
+-- Farm Mobs Section
+local FarmingLevel = Tabs.Main:Section({ Title="Farm Mobs", Box=true, Opened=true })
+
+FarmingLevel:Toggle({
+    Title="Kill Nearest Mobs", Desc="Inf-M1 on nearest mobs", Icon="sword",
+    Type="Checkbox", Value=false,
+    Callback=function(state) _G.AutoAttack = state end,
+})
+
+FarmingLevel:Toggle({
+    Title="Auto Farm Level", Desc="Automatically farms best mob for your level", Icon="swords",
+    Type="Checkbox", Value=false,
+    Callback=function(state)
+        _G.FarmLevel = state
+        if state then
+            local level = player.Data and player.Data.Level and player.Data.Level.Value or 0
+            local mob   = GetBestMob(level)
+            if mob then
+                TeleportToMobIsland(mob)
+                task.wait(2)
+                pcall(function() replicated.RemoteEvents.QuestAccept:FireServer(mob.questNPC) end)
+            end
+        end
+    end,
+})
+
+do
+    local MobNames = {}
+    for _, mob in ipairs(mobs) do table.insert(MobNames, mob.npcType) end
+
+    FarmingLevel:Dropdown({
+        Title="Select Mob", Desc="Choose which mob to farm",
+        Values=MobNames, Value=MobNames[1], Multi=false,
+        Callback=function(s) _G.SelectedMobType = s end,
+    })
 end
-while ReplicaBallerFarm do
-for i, v in pairs(workspace:GetChildren()) do
-                if v.Name:match(game.Players.LocalPlayer.Name) and v:FindFirstChild("HumanoidRootPart") then
-game.ReplicatedStorage.b:FireServer(v:WaitForChild("HumanoidRootPart"))
+
+FarmingLevel:Toggle({
+    Title="Auto Farm Selected Mob", Desc="Farms selected mob type", Icon="swords",
+    Type="Checkbox", Value=false,
+    Callback=function(state) _G.FarmSelectedMob = state end,
+})
+
+-- Advanced Mob Farm
+local AdvFarmSection = Tabs.Main:Section({ Title="Advanced Mob Farm", Box=true, Opened=false })
+
+AdvFarmSection:Dropdown({
+    Title="Select Mob(s)", Desc="Multi-select mobs",
+    Values=Tables.MobList, Value=nil, Multi=true,
+    Callback=function(s) _G.SelectedMobs = s end,
+})
+
+AdvFarmSection:Button({ Title="Refresh Mob List", Callback=function() UpdateNPCLists() end })
+
+AdvFarmSection:Toggle({
+    Title="Auto Farm Selected Mob(s)", Icon="target",
+    Type="Checkbox", Value=false,
+    Callback=function(state)
+        _G.AdvFarmActive = state
+        if state then
+            task.spawn(function()
+                while _G.AdvFarmActive do
+                    local selected = _G.SelectedMobs or {}
+                    for mobName, enabled in pairs(selected) do
+                        if enabled then
+                            local target, _ = GetBestMobCluster({[mobName]=true})
+                            if target then
+                                local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+                                if root then
+                                    root.CFrame = target:GetPivot() * CFrame.new(0,0,10)
+                                end
+                                pcall(function() Remotes.M1:FireServer(target:GetPivot().Position) end)
+                            end
+                        end
+                    end
+                    task.wait(0.1)
                 end
-end
-task.wait()
-                       end
-elseif ReplicaBallerFarm == true then
-OrionLib:MakeNotification({Name = "Error",Content = "You don't have Baller equipped.",Image = "rbxassetid://7733658504",Time = 5})
-wait(0.05)
-RBSF:Set(false)
-end
-end
-                })
-function SpamReplicaBaller()
-OGL = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame
-while ReplicaBallerFarm do
-if game.Players.LocalPlayer.Character.IsInDefaultArena.Value == false then
-firetouchinterest(game.Players.LocalPlayer.Character:WaitForChild("Head"), workspace.Lobby.Teleport2, 0)
-firetouchinterest(game.Players.LocalPlayer.Character:WaitForChild("Head"), workspace.Lobby.Teleport2, 1)
-wait(0.25)
-end
-game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = OGL
-wait(0.25)
-game:GetService("ReplicatedStorage").GeneralAbility:FireServer()
-game.ReplicatedStorage.HumanoidDied:FireServer(game.Players.LocalPlayer.Character,false)
-wait(3.75)
-fireclickdetector(workspace.Lobby.Replica.ClickDetector)
-firetouchinterest(game.Players.LocalPlayer.Character:WaitForChild("Head"), workspace.Lobby.Teleport2, 0)
-firetouchinterest(game.Players.LocalPlayer.Character:WaitForChild("Head"), workspace.Lobby.Teleport2, 1)
-wait(0.25)
-game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = OGL
-wait(0.25)
-game:GetService("ReplicatedStorage").Duplicate:FireServer()
-wait(20)
-game.ReplicatedStorage.HumanoidDied:FireServer(game.Players.LocalPlayer.Character,false)
-wait(3.75)
-fireclickdetector(workspace.Lobby.Baller.ClickDetector)
-end
-end
+            end)
+        end
+    end,
+})
 
-RSF = Tab5:AddToggle({
-                    Name = "Replica Slap Farm (Use default arena portal)",
-                    Default = false,
-                    Callback = function(Value)
-ReplicaFarm = Value
-if game.Players.LocalPlayer.leaderstats.Glove.Value == "Replica" and game.Players.LocalPlayer.Character.IsInDefaultArena.Value == true then
-if ReplicaFarm == true then
-coroutine.wrap(SpamReplica)()
-end
-while ReplicaFarm do
-for i, v in pairs(workspace:GetChildren()) do
-                if v.Name:match(game.Players.LocalPlayer.Name) and v:FindFirstChild("HumanoidRootPart") then
-game.ReplicatedStorage.b:FireServer(v:WaitForChild("HumanoidRootPart"))
+AdvFarmSection:Toggle({
+    Title="Auto Farm All Mobs", Desc="Rotates through all mobs", Icon="swords",
+    Type="Checkbox", Value=false,
+    Callback=function(state)
+        _G.AutoFarmAllMobs = state
+        if state then
+            task.spawn(function()
+                local idx = 1
+                while _G.AutoFarmAllMobs do
+                    if #Tables.MobList == 0 then task.wait(1); continue end
+                    if idx > #Tables.MobList then idx = 1 end
+                    local mobName = Tables.MobList[idx]
+                    local target, _ = GetBestMobCluster({[mobName]=true})
+                    if target then
+                        local island = GetNearestIsland(target:GetPivot().Position, target.Name)
+                        if island ~= Shared.Island then
+                            Remotes.TP_Portal:FireServer(island)
+                            Shared.Island = island
+                            task.wait(2)
+                        end
+                        local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+                        if root then root.CFrame = target:GetPivot() * CFrame.new(0,0,10) end
+                        pcall(function() Remotes.M1:FireServer(target:GetPivot().Position) end)
+                    else
+                        idx = idx + 1
+                    end
+                    task.wait(0.1)
+                end
+            end)
+        end
+    end,
+})
+
+-- ============================================================
+--  BOSS FARM TAB
+-- ============================================================
+local SlimeSection = Tabs.Boss:Section({ Title="Slime Pieces", Box=true, Opened=true })
+
+SlimeSection:Toggle({
+    Title="Auto Unlock All Slime Pieces", Desc="Visits all islands and collects pieces", Icon="puzzle",
+    Type="Checkbox", Value=false,
+    Callback=function(v)
+        if not v then return end
+        task.spawn(function()
+            local islands = {
+                {portal="Slime", npc=true},
+                {portal="Desert",   piece="DesertIsland.SlimePuzzlePiece"},
+                {portal="Snow",     piece="SnowIsland.SlimePuzzlePiece"},
+                {portal="Starter",  piece="StarterIsland.SlimePuzzlePiece", offset=CFrame.new(0,2,0)},
+                {portal="Jungle",   piece="JungleIsland.SlimePuzzlePiece"},
+                {portal="Shibuya",  piece="ShibuyaStation.SlimePuzzlePiece"},
+                {portal="HollowIsland", piece="HollowIsland.SlimePuzzlePiece"},
+                {portal="Shinjuku", piece="ShinjukuIsland.SlimePuzzlePiece"},
+            }
+            replicated.Remotes.TeleportToPortal:FireServer("Slime")
+            WindUI:Notify({ Title="Slime Pieces", Content="Going to SlimeNPC", Duration=2, Icon="map" })
+            task.wait(1.5)
+            Tween2(workspace.ServiceNPCs.SlimeCraftNPC.HumanoidRootPart.CFrame)
+            task.wait(0.1)
+            vim1:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+            task.wait(0.5)
+            vim1:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+            task.wait(1)
+            for i = 2, #islands do
+                local entry = islands[i]
+                replicated.Remotes.TeleportToPortal:FireServer(entry.portal)
+                WindUI:Notify({ Title="Slime Pieces", Content="Going to "..entry.portal, Duration=2, Icon="map" })
+                task.wait(2.5)
+                local parts = entry.piece:split(".")
+                local obj = workspace
+                for _, p in ipairs(parts) do obj = obj:FindFirstChild(p) or obj end
+                if obj and obj ~= workspace then
+                    local cf = obj.CFrame
+                    if entry.offset then cf = cf * entry.offset end
+                    Tween2(cf)
+                    task.wait(0.5)
+                    vim1:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+                    task.wait(0.5)
+                    vim1:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+                    task.wait(1)
                 end
             end
-task.wait()
-                       end
-elseif ReplicaFarm == true then
-OrionLib:MakeNotification({Name = "Error",Content = "You don't have Replica equipped, or you aren't in the Default arena.",Image = "rbxassetid://7733658504",Time = 5})
-wait(0.05)
-RSF:Set(false)
-end
-end
-                })
-function SpamReplica()
-while ReplicaFarm do
-                           game:GetService("ReplicatedStorage").Duplicate:FireServer()
-                       wait(19.9)
-                       end
-end
-
-Tab4:AddTextbox({
-	Name = "Equip Glove (Only use in lobby)",
-	Default = "Glove Name",
-	TextDisappear = true,
-	Callback = function(Value)
-if game.Players.LocalPlayer.Character:FindFirstChild("entered") == nil then
-		fireclickdetector(workspace.Lobby[Value].ClickDetector)
-else
-OrionLib:MakeNotification({Name = "Error",Content = "You aren't in the lobby.",Image = "rbxassetid://7733658504",Time = 5})
-end
-	end	  
-})
-
-Tab4:AddButton({
-	Name = "Free Emotes (Type /e emotename)",
-	Callback = function()
-Floss = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Floss, game.Players.LocalPlayer.Character.Humanoid)
-Groove = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Groove, game.Players.LocalPlayer.Character.Humanoid)
-Headless = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Headless, game.Players.LocalPlayer.Character.Humanoid)
-Helicopter = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Helicopter, game.Players.LocalPlayer.Character.Humanoid)
-Kick = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Kick, game.Players.LocalPlayer.Character.Humanoid)
-L = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.L, game.Players.LocalPlayer.Character.Humanoid)
-Laugh = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Laugh, game.Players.LocalPlayer.Character.Humanoid)
-Parker = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Parker, game.Players.LocalPlayer.Character.Humanoid)
-Spasm = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Spasm, game.Players.LocalPlayer.Character.Humanoid)
-Thriller = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Thriller, game.Players.LocalPlayer.Character.Humanoid)
-game.Players.LocalPlayer.Chatted:connect(function(msg)
-if game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-Floss = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Floss, game.Players.LocalPlayer.Character.Humanoid)
-Groove = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Groove, game.Players.LocalPlayer.Character.Humanoid)
-Headless = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Headless, game.Players.LocalPlayer.Character.Humanoid)
-Helicopter = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Helicopter, game.Players.LocalPlayer.Character.Humanoid)
-Kick = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Kick, game.Players.LocalPlayer.Character.Humanoid)
-L = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.L, game.Players.LocalPlayer.Character.Humanoid)
-Laugh = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Laugh, game.Players.LocalPlayer.Character.Humanoid)
-Parker = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Parker, game.Players.LocalPlayer.Character.Humanoid)
-Spasm = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Spasm, game.Players.LocalPlayer.Character.Humanoid)
-Thriller = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.AnimationPack.Thriller, game.Players.LocalPlayer.Character.Humanoid)
-if string.lower(msg) == "/e floss" then
-Floss:Play()
-elseif string.lower(msg) == "/e groove" then
-Groove:Play()
-elseif string.lower(msg) == "/e headless" then
-Headless:Play()
-elseif string.lower(msg) == "/e helicopter" then
-Helicopter:Play()
-elseif string.lower(msg) == "/e kick" then
-Kick:Play()
-elseif string.lower(msg) == "/e l" then
-L:Play()
-elseif string.lower(msg) == "/e laugh" then
-Laugh:Play()
-elseif string.lower(msg) == "/e parker" then
-Parker:Play()
-elseif string.lower(msg) == "/e spasm" then
-Spasm:Play()
-elseif string.lower(msg) == "/e thriller" then
-Thriller:Play()
-end
-EP = game.Players.LocalPlayer.Character.HumanoidRootPart.Position
-end
-end)
-game:GetService("RunService").Heartbeat:Connect(function()
-if EP ~= nil and game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and Floss.IsPlaying or Groove.IsPlaying or Headless.IsPlaying or Helicopter.IsPlaying or Kick.IsPlaying or L.IsPlaying or Laugh.IsPlaying or Parker.IsPlaying or Spasm.IsPlaying or Thriller.IsPlaying then
-Magnitude = (game.Players.LocalPlayer.Character.HumanoidRootPart.Position - EP).Magnitude
-if Magnitude > 1 then
-Floss:Stop(); Groove:Stop(); Headless:Stop(); Helicopter:Stop(); Kick:Stop(); L:Stop(); Laugh:Stop(); Parker:Stop(); Spasm:Stop(); Thriller:Stop()
-end
-end
-end)
-                    end    
-                })
-
-Tab5:AddButton({
-	Name = "Infinite Golden (Use in arena)",
-	Callback = function()
-game:GetService("ReplicatedStorage").Goldify:FireServer(true)
-                    end    
-                })
-
-GG = Tab5:AddToggle({
-	Name = "Give godmode (Needs guardian angel)",
-	Default = false,
-	Callback = function(Value)
-GiveGodmode = Value
-if game.Players.LocalPlayer.leaderstats.Glove.Value == "Guardian Angel" then
-while GiveGodmode do
-game.ReplicatedStorage.GeneralAbility:FireServer(game.Players[GodmodePlayer])
-task.wait()
-end
-elseif GiveGodmode == true then
-OrionLib:MakeNotification({Name = "Error",Content = "You don't have Guardian Angel equipped.",Image = "rbxassetid://7733658504",Time = 5})
-wait(0.05)
-GG:Set(false)
-end
-	end    
-})
-
-Tab5:AddTextbox({
-	Name = "Player to give godmode to",
-	Default = "Username",
-	TextDisappear = false,
-	Callback = function(Value)
-GodmodePlayer = Value
-	end	  
-})
-
-GAAI = Tab5:AddToggle({
-                    Name = "Get all alchemist ingredients",
-                    Default = false,
-                    Callback = function(Value)
-AlchemistIngredients = Value
-if game.Players.LocalPlayer.leaderstats.Glove.Value == "Alchemist" then
-while AlchemistIngredients do
-game.ReplicatedStorage.AlchemistEvent:FireServer("AddItem","Mushroom")
-game.ReplicatedStorage.AlchemistEvent:FireServer("AddItem","Glowing Mushroom")
-game.ReplicatedStorage.AlchemistEvent:FireServer("AddItem","Fire Flower")
-game.ReplicatedStorage.AlchemistEvent:FireServer("AddItem","Winter Rose")
-game.ReplicatedStorage.AlchemistEvent:FireServer("AddItem","Dark Root")
-game.ReplicatedStorage.AlchemistEvent:FireServer("AddItem","Dire Flower")
-game.ReplicatedStorage.AlchemistEvent:FireServer("AddItem","Autumn Sprout")
-game.ReplicatedStorage.AlchemistEvent:FireServer("AddItem","Elder Wood")
-game.ReplicatedStorage.AlchemistEvent:FireServer("AddItem","Hazel Lily")
-game.ReplicatedStorage.AlchemistEvent:FireServer("AddItem","Wild Vine")
-game.ReplicatedStorage.AlchemistEvent:FireServer("AddItem","Jade Stone")
-game.ReplicatedStorage.AlchemistEvent:FireServer("AddItem","Lamp Grass")
-game.ReplicatedStorage.AlchemistEvent:FireServer("AddItem","Plane Flower")
-game.ReplicatedStorage.AlchemistEvent:FireServer("AddItem","Blood Rose")
-game.ReplicatedStorage.AlchemistEvent:FireServer("AddItem","Red Crystal")
-game.ReplicatedStorage.AlchemistEvent:FireServer("AddItem","Blue Crystal")
-task.wait()
-end
-elseif AlchemistIngredients == true then
-OrionLib:MakeNotification({Name = "Error",Content = "You don't have Alchemist equipped.",Image = "rbxassetid://7733658504",Time = 5})
-task.wait()
-GAAI:Set(false)
-end
-                    end    
-                })
-
-RNS = Tab5:AddToggle({
-                    Name = "Rhythm Note Spam + Auto Press (Equip Rhythm)",
-                    Default = false,
-                    Callback = function(Value)
-RhythmNoteSpam = Value
-if game.Players.LocalPlayer.leaderstats.Glove.Value == "Rhythm" then
-while RhythmNoteSpam do
-game.Players.LocalPlayer.PlayerGui.Rhythm.LocalScript.Disabled = false
-game.Players.LocalPlayer.PlayerGui.Rhythm.LocalScript.Disabled = true
-game.Players.LocalPlayer.Character.Rhythm:Activate()
-task.wait()
-end
-elseif RhythmNoteSpam == true then
-OrionLib:MakeNotification({Name = "Error",Content = "You don't have Rhythm equipped.",Image = "rbxassetid://7733658504",Time = 5})
-wait(0.05)
-RNS:Set(false)
-end
-                    end    
-                })
-
-                Tab5:AddToggle({
-                    Name = "Auto Click Tycoon",
-                    Default = false,
-                    Callback = function(Value)
-AutoTycoon = Value
-    for i,v in pairs(workspace:GetDescendants()) do
-        if v.Name == "End" and v.ClassName == "Part" then
-            v.Size = Vector3.new(28, 0.3, 4)
-        end
-    end
-while AutoTycoon do
-    for i,v in pairs(workspace:GetDescendants()) do
-        if v.Name == "Click" and v:FindFirstChild("ClickDetector") then
-            fireclickdetector(v.ClickDetector)
-        end
-    end
-    task.wait()
-end
-                    end    
-                })
-
-Tab5:AddToggle({
-                    Name = "Rainbow Character (Needs Golden)",
-                    Default = false,
-                    Callback = function(Value)
-Rainbow = Value
-while Rainbow do
-for i = 0,1,0.001*25 do
-game:GetService("ReplicatedStorage").Goldify:FireServer(false, BrickColor.new(Color3.fromHSV(i,1,1)))
-task.wait()
-end
-end
-end
-                })
-
-Tab4:AddDropdown({
-	Name = "Rojo Charge VFX (Will fling you if spammed)",
-	Default = "",
-	Options = {"Attack", "No Attack"},
-	Callback = function(Value)
-if Value == "Attack" then
-game:GetService("ReplicatedStorage"):WaitForChild("RojoAbility"):FireServer("Charge")
-wait(6)
-game:GetService("ReplicatedStorage"):WaitForChild("RojoAbility"):FireServer("Release", {game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame})
-elseif Value == "No Attack" then
-game:GetService("ReplicatedStorage"):WaitForChild("RojoAbility"):FireServer("Charge")
-end
-	end    
-})
-
-Tab4:AddButton({
-	Name = "Destroy all tycoons",
-	Callback = function()
-for i = 1, 110 do
- for i,v in pairs(workspace:GetDescendants()) do
-        if v.Name == "Destruct" and v:FindFirstChild("ClickDetector") then
-            fireclickdetector(v.ClickDetector)
-        end
-    end
-task.wait()
-end
-                    end    
-                })
-
-                Tab4:AddToggle({
-                    Name = "Spam Zombie Sound (All gloves)",
-                    Default = false,
-                    Callback = function(Value)
-ZombieSoundSpam = Value
-while ZombieSoundSpam do
-game:GetService("ReplicatedStorage").b:FireServer("ReplicateSound_Zombie")
-task.wait()
-end
-                    end    
-                })
-
-                Tab4:AddToggle({
-                    Name = "Spam Error Sound (All gloves)",
-                    Default = false,
-                    Callback = function(Value)
-ErrorSoundSpam = Value
-while ErrorSoundSpam do
-game.ReplicatedStorage.ErrorDeath:FireServer()
-task.wait()
-end
-                    end    
-                })
-
-                Tab5:AddToggle({
-                    Name = "Spam Glove Sound",
-                    Default = false,
-                    Callback = function(Value)
-GloveSoundSpam = Value
-while GloveSoundSpam and GloveSound == "Ghost" do
-game.ReplicatedStorage.Ghostinvisibilityactivated:FireServer()
-game.ReplicatedStorage.Ghostinvisibilitydeactivated:FireServer()
-task.wait()
-end
-while GloveSoundSpam and GloveSound == "Thanos" do
-game:GetService("ReplicatedStorage").Illbeback:FireServer()
-task.wait()
-end
-while GloveSoundSpam and GloveSound == "Space" do
-game:GetService("ReplicatedStorage").ZeroGSound:FireServer()
-task.wait()
-end
-while GloveSoundSpam and GloveSound == "Golden" do
-game:GetService("ReplicatedStorage").Goldify:FireServer(true)
-task.wait()
-end
-while GloveSoundSpam and GloveSound == "Hitman" do
-game:GetService("ReplicatedStorage"):WaitForChild("HitmanAbility"):FireServer("ReplicateGoldenRevolver",{0})
-task.wait()
-end
-                    end    
-                })
-
-Tab5:AddDropdown({
-	Name = "Glove Sound",
-	Default = "Ghost",
-	Options = {"Ghost", "Thanos", "Space", "Golden", "Hitman"},
-	Callback = function(Value)
-GloveSound = Value
-	end    
-})
-
-Tab7:AddSlider({
-	Name = "Walkspeed",
-	Min = 20,
-	Max = 1000,
-	Default = 20,
-	Color = Color3.fromRGB(140, 185, 255),
-	Increment = 1,
-	ValueName = "WS",
-	Callback = function(Value)
-		game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = Value
-Walkspeed = Value
-	end    
-})
-
-Tab7:AddToggle({
-	Name = "Keep Walkspeed",
-	Default = false,
-	Callback = function(Value)
-KeepWalkspeed = Value
-            while KeepWalkspeed do
-                if game.Players.LocalPlayer.Character:FindFirstChild("Humanoid") ~= nil and game.Players.LocalPlayer.Character.Humanoid.WalkSpeed ~= Walkspeed then
-                    game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = Walkspeed
-                end
-task.wait()
-            end
-	end    
-})
-
-Tab7:AddSlider({
-	Name = "Jumppower",
-	Min = 50,
-	Max = 1000,
-	Default = 50,
-	Color = Color3.fromRGB(255, 185, 140),
-	Increment = 1,
-	ValueName = "JP",
-	Callback = function(Value)
-		game.Players.LocalPlayer.Character.Humanoid.JumpPower = Value
-Jumppower = Value
-	end    
-})
-
-Tab7:AddToggle({
-	Name = "Keep Jumppower",
-	Default = false,
-	Callback = function(Value)
-KeepJumppower = Value
-            while KeepJumppower do
-                if game.Players.LocalPlayer.Character:FindFirstChild("Humanoid") ~= nil and game.Players.LocalPlayer.Character.Humanoid.WalkSpeed ~= Jumppower then
-                    game.Players.LocalPlayer.Character.Humanoid.JumpPower = Jumppower
-                end
-task.wait()
-            end
-	end    
-})
-
-Tab6:AddButton({
-	Name = "Get Elude",
-	Callback = function()
-local teleportFunc = queueonteleport or queue_on_teleport or syn and syn.queue_on_teleport
-if teleportFunc then
-    teleportFunc([[
-        if not game:IsLoaded() then
-            game.Loaded:Wait()
-        end
-        repeat wait() until game.Players.LocalPlayer
-        game:GetService("RunService").RenderStepped:Connect(function()
-            game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(-502.336, 14.228, -179.597)
+            WindUI:Notify({ Title="Done!", Content="All slime pieces collected!", Duration=3, Icon="check" })
         end)
-game:GetService("TeleportService"):Teleport(6403373529)
-    ]])
-end
-game:GetService("TeleportService"):Teleport(11828384869)
-  	end    
+    end,
 })
 
-Tab6:AddLabel("When in the elude maze there is a counter feature")
+local slimePieces = {
+    {label="#1 Desert",    portal="Desert",       path="DesertIsland.SlimePuzzlePiece"},
+    {label="#2 Snow",      portal="Snow",         path="SnowIsland.SlimePuzzlePiece"},
+    {label="#3 Starter",   portal="Starter",      path="StarterIsland.SlimePuzzlePiece"},
+    {label="#4 Jungle",    portal="Jungle",       path="JungleIsland.SlimePuzzlePiece"},
+    {label="#5 Shibuya",   portal="Shibuya",      path="ShibuyaStation.SlimePuzzlePiece"},
+    {label="#6 Hollow",    portal="HollowIsland", path="HollowIsland.SlimePuzzlePiece"},
+    {label="#7 Shinjuku",  portal="Shinjuku",     path="ShinjukuIsland.SlimePuzzlePiece"},
+}
 
-Tab6:AddButton({
-	Name = "Get Chain (Needs 1k slaps)",
-	Callback = function()
-if game.Players.LocalPlayer.leaderstats.Slaps.Value >= 1000 then
-local teleportFunc = queueonteleport or queue_on_teleport or syn and syn.queue_on_teleport
-if teleportFunc then
-    teleportFunc([[
-        if not game:IsLoaded() then
-            game.Loaded:Wait()
-        end
-        repeat wait() until game.Players.LocalPlayer
- repeat wait() until game.Workspace:FindFirstChild("Map"):FindFirstChild("CodeBrick")
-if game.Workspace.Map.CodeBrick.SurfaceGui:FindFirstChild("IMGTemplate") then
-game.Workspace.Map.CodeBrick.SurfaceGui.IMGTemplate.Name = "1st"
-game.Workspace.Map.CodeBrick.SurfaceGui.IMGTemplate.Name = "2nd"
-game.Workspace.Map.CodeBrick.SurfaceGui.IMGTemplate.Name = "3rd"
-game.Workspace.Map.CodeBrick.SurfaceGui.IMGTemplate.Name = "4th"
-end
-for i,v in pairs(game.Workspace.Map.CodeBrick.SurfaceGui:GetChildren()) do
-                    if v.Name == "1st" then
-                        if v.Image == "http://www.roblox.com/asset/?id=9648769161" then
-                    first = "4"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648765536" then
-                    first = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648762863" then
-                    first = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648759883" then
-                    first = "9"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648755440" then
-                    first = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648752438" then
-                    first = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648749145" then
-                    first = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648745618" then
-                    first = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648742013" then
-                    first = "7"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648738553" then
-                    first = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648734698" then
-                    first = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648730082" then
-                    first = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648723237" then
-                    first = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648718450" then
-                    first = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648715920" then
-                    first = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648712563" then
-                    first = "2"
-                end
-                    end
-                end
-for i,v in pairs(game.Workspace.Map.CodeBrick.SurfaceGui:GetChildren()) do
-                    if v.Name == "2nd" then
-                        if v.Image == "http://www.roblox.com/asset/?id=9648769161" then
-                    second = "4"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648765536" then
-                    second = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648762863" then
-                    second = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648759883" then
-                    second = "9"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648755440" then
-                    second = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648752438" then
-                    second = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648749145" then
-                    second = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648745618" then
-                    second = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648742013" then
-                    second = "7"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648738553" then
-                    second = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648734698" then
-                    second = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648730082" then
-                    second = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648723237" then
-                    second = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648718450" then
-                    second = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648715920" then
-                    second = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648712563" then
-                    second = "2"
-                end
-                    end
-                end
-for i,v in pairs(game.Workspace.Map.CodeBrick.SurfaceGui:GetChildren()) do
-                    if v.Name == "3rd" then
-                        if v.Image == "http://www.roblox.com/asset/?id=9648769161" then
-                    third = "4"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648765536" then
-                    third = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648762863" then
-                    third = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648759883" then
-                    third = "9"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648755440" then
-                    third = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648752438" then
-                    third = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648749145" then
-                    third = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648745618" then
-                    third = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648742013" then
-                    third = "7"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648738553" then
-                    third = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648734698" then
-                    third = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648730082" then
-                    third = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648723237" then
-                    third = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648718450" then
-                    third = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648715920" then
-                    third = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648712563" then
-                    third = "2"
-                end
-                    end
-                end
-for i,v in pairs(game.Workspace.Map.CodeBrick.SurfaceGui:GetChildren()) do
-                    if v.Name == "4th" then
-                        if v.Image == "http://www.roblox.com/asset/?id=9648769161" then
-                    fourth = "4"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648765536" then
-                    fourth = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648762863" then
-                    fourth = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648759883" then
-                    fourth = "9"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648755440" then
-                    fourth = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648752438" then
-                    fourth = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648749145" then
-                    fourth = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648745618" then
-                    fourth = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648742013" then
-                    fourth = "7"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648738553" then
-                    fourth = "8"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648734698" then
-                    fourth = "2"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648730082" then
-                    fourth = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648723237" then
-                    fourth = "3"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648718450" then
-                    fourth = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648715920" then
-                    fourth = "6"
-                elseif v.Image == "http://www.roblox.com/asset/?id=9648712563" then
-                    fourth = "2"
-                end
-                    end
-                end
-fireclickdetector(game.Workspace.Map.OriginOffice.Door.Keypad.Buttons.Reset.ClickDetector)
-wait(0.25)
-fireclickdetector(game.Workspace.Map.OriginOffice.Door.Keypad.Buttons[first].ClickDetector)
-wait(0.25)
-fireclickdetector(game.Workspace.Map.OriginOffice.Door.Keypad.Buttons[second].ClickDetector)
-wait(0.25)
-fireclickdetector(game.Workspace.Map.OriginOffice.Door.Keypad.Buttons[third].ClickDetector)
-wait(0.25)
-fireclickdetector(game.Workspace.Map.OriginOffice.Door.Keypad.Buttons[fourth].ClickDetector)
-wait(0.25)
-fireclickdetector(game.Workspace.Map.OriginOffice.Door.Keypad.Buttons.Enter.ClickDetector)
-game:GetService("TeleportService"):Teleport(6403373529)
-    ]])
-end
-game:GetService("TeleportService"):Teleport(9431156611)
-end
-  	end    
-})
-
-Tab6:AddButton({
-	Name = "Get Tycoon",
-	Callback = function()
-      		repeat task.wait()
-game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = workspace.Arena.Plate.CFrame * CFrame.new(0,-1.5,0) * CFrame.Angles(math.rad(90), math.rad(0), math.rad(0))
-until game.Players.LocalPlayer.PlayerGui.PlateIndicator.TextLabel.Text == "Plate Counter: 600"
-                    end    
-                })
-
-Tab6:AddButton({
-                    Name = "Get [REDACTED] (Needs 5k slaps)",
-Callback = function()
-if game.Players.LocalPlayer.leaderstats.Slaps.Value >= 5000 then
-Door = 0
-for i = 1, 10 do
-Door = Door + 1
-        if game:GetService("BadgeService"):UserHasBadgeAsync(game.Players.LocalPlayer.UserId, 2124847850) then
-        else
-        firetouchinterest(game.Players.LocalPlayer.Character:WaitForChild("Head"), workspace.PocketDimension.Doors[Door], 0)
-firetouchinterest(game.Players.LocalPlayer.Character:WaitForChild("Head"), workspace.PocketDimension.Doors[Door], 1)
-wait(3.75)
-end
-end
-else
-OrionLib:MakeNotification({Name = "Error",Content = "You need 5000+ slaps.",Image = "rbxassetid://7733658504",Time = 5})
+for _, sp in ipairs(slimePieces) do
+    SlimeSection:Button({
+        Title="Teleport to Slime "..sp.label, Desc="",
+        Callback=function()
+            replicated.Remotes.TeleportToPortal:FireServer(sp.portal)
+            WindUI:Notify({ Title="Teleporting", Content=sp.label, Duration=2, Icon="map" })
+            task.wait(3)
+            local parts = sp.path:split(".")
+            local obj = workspace
+            for _, p in ipairs(parts) do obj = obj:FindFirstChild(p) or obj end
+            if obj and obj ~= workspace then
+                Tween2(obj.CFrame)
+                task.wait(0.5)
+                vim1:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+                task.wait(0.7)
+                vim1:SendKeyEvent(false, Enum.KeyCode.E, false, game)
             end
+        end,
+    })
 end
-                    })
 
-Tab6:AddButton({
-                    Name = "Get Kinetic (~10 mins) (Blatant)",
-Callback = function()
-if game.Players.LocalPlayer.leaderstats.Glove.Value == "Stun" then
-OGL = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame
-for i = 1,100 do
-game.ReplicatedStorage.SelfKnockback:FireServer({["Force"] = 0,["Direction"] = Vector3.new(0,0.01,0)})
-wait(0.05)
-end
-wait(1.5)
-repeat
-local players = game.Players:GetChildren()
-local RandomPlayer = players[math.random(1, #players)]
-repeat RandomPlayer = players[math.random(1, #players)] until RandomPlayer ~= game.Players.LocalPlayer and RandomPlayer.Character:FindFirstChild("entered") and RandomPlayer.Character:FindFirstChild("rock") == nil and RandomPlayer.Character.Head:FindFirstChild("UnoReverseCard") == nil
-Target = RandomPlayer
-game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = Target.Character.HumanoidRootPart.CFrame * CFrame.new(0,-20,0)
-wait(0.25)
-game.ReplicatedStorage.StunR:FireServer(game.Players.LocalPlayer.Character.Stun)
-game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = OGL
-wait(9.9)
-until game.Players.LocalPlayer.Character:FindFirstChild("EMPStunBadgeCounter") and game.Players.LocalPlayer.Character.EMPStunBadgeCounter.Value >= 50
-else
-OrionLib:MakeNotification({Name = "Error",Content = "You don't have Stun equipped.",Image = "rbxassetid://7733658504",Time = 5})
-end
-end
-                    })
+-- Boss Farm Section
+local BossFarmSection = Tabs.Boss:Section({ Title="Auto Farm Bosses", Box=true, Opened=true })
 
-Tab6:AddToggle({
-	Name = "Jet Farm",
-	Default = false,
-	Callback = function(Value)
-Jetfarm = Value
-while Jetfarm do
-for i,v in pairs(game.Workspace:GetChildren()) do
-                    if v.Name == "JetOrb" and v:FindFirstChild("TouchInterest") then
-firetouchinterest(game.Players.LocalPlayer.Character:WaitForChild("Head"), v, 0)
-firetouchinterest(game.Players.LocalPlayer.Character:WaitForChild("Head"), v, 1)
+BossFarmSection:Dropdown({
+    Title="Select Boss(es)", Desc="Pick bosses to farm",
+    Values=Tables.BossList, Value=nil, Multi=true,
+    Callback=function(s) _G.SelectedBosses = s end,
+})
+
+BossFarmSection:Toggle({
+    Title="Auto Farm Selected Boss", Icon="skull",
+    Type="Checkbox", Value=false,
+    Callback=function(state)
+        _G.BossFarmActive = state
+        if state then
+            task.spawn(function()
+                while _G.BossFarmActive do
+                    local selected = _G.SelectedBosses or {}
+                    for bossName, enabled in pairs(selected) do
+                        if enabled then
+                            local found = false
+                            for _, npc in pairs(PATH.Mobs:GetChildren()) do
+                                if IsStrictBossMatch(npc.Name, bossName) and IsValidTarget(npc) then
+                                    local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+                                    if root then root.CFrame = npc:GetPivot() * CFrame.new(0,0,10) end
+                                    pcall(function() Remotes.M1:FireServer(npc:GetPivot().Position) end)
+                                    found = true; break
+                                end
+                            end
+                            if not found then
+                                FireBossRemote(bossName, _G.BossDiff or "Normal")
+                                task.wait(1)
+                            end
+                        end
                     end
+                    task.wait(0.1)
                 end
-task.wait()
-end
-	end    
-})
-
-Tab6:AddToggle({
-	Name = "Phase Farm",
-	Default = false,
-	Callback = function(Value)
-Phasefarm = Value
-while Phasefarm do
-for i,v in pairs(game.Workspace:GetChildren()) do
-                    if v.Name == "PhaseOrb" and v:FindFirstChild("TouchInterest") then
-firetouchinterest(game.Players.LocalPlayer.Character:WaitForChild("Head"), v, 0)
-firetouchinterest(game.Players.LocalPlayer.Character:WaitForChild("Head"), v, 1)
-                    end
-                end
-task.wait()
-end
-	end    
-})
-
-Tab6:AddButton({
-	Name = "Get Trap (~25-30 mins)",
-	Callback = function()
-if game.Players.LocalPlayer.leaderstats.Glove.Value == "Brick" then
-for i = 1, 200 do
-game:GetService("ReplicatedStorage").lbrick:FireServer()
-game.Players.LocalPlayer.PlayerGui.BRICKCOUNT.ImageLabel.TextLabel.Text = game.Players.LocalPlayer.PlayerGui.BRICKCOUNT.ImageLabel.TextLabel.Text + 1;
-wait(Random.new():NextNumber(1.5,1.75))
-game:GetService("ReplicatedStorage").lbrick:FireServer()
-game.Players.LocalPlayer.PlayerGui.BRICKCOUNT.ImageLabel.TextLabel.Text = game.Players.LocalPlayer.PlayerGui.BRICKCOUNT.ImageLabel.TextLabel.Text + 1;
-wait(Random.new():NextNumber(1.5,1.75))
-game:GetService("ReplicatedStorage").lbrick:FireServer()
-game.Players.LocalPlayer.PlayerGui.BRICKCOUNT.ImageLabel.TextLabel.Text = game.Players.LocalPlayer.PlayerGui.BRICKCOUNT.ImageLabel.TextLabel.Text + 1;
-wait(Random.new():NextNumber(1.5,1.75))
-game:GetService("ReplicatedStorage").lbrick:FireServer()
-game.Players.LocalPlayer.PlayerGui.BRICKCOUNT.ImageLabel.TextLabel.Text = game.Players.LocalPlayer.PlayerGui.BRICKCOUNT.ImageLabel.TextLabel.Text + 1;
-wait(Random.new():NextNumber(1.5,1.75))
-game:GetService('VirtualInputManager'):SendKeyEvent(true,'E',false,x)
-wait(Random.new():NextNumber(1.5,1.75))
-end
-else
-OrionLib:MakeNotification({Name = "Error",Content = "You don't have Brick equipped.",Image = "rbxassetid://7733658504",Time = 5})
-end
-                    end    
-                })
-
-BF = Tab6:AddToggle({
-	Name = "Brick Farm (Use if the fast version doesnt work)",
-	Default = false,
-	Callback = function(Value)
-Brickfarm = Value
-if game.Players.LocalPlayer.leaderstats.Glove.Value == "Brick" then
-while Brickfarm do
-game:GetService('VirtualInputManager'):SendKeyEvent(true,'E',false,x)
-task.wait(5.05)
-end
-elseif Value == true then
-OrionLib:MakeNotification({Name = "Error",Content = "You don't have Brick equipped.",Image = "rbxassetid://7733658504",Time = 5})
-wait(0.05)
-BF:Set(false)
-end
-	end    
-})
-
-BOB = Tab6:AddToggle({
-                    Name = "Bob Farm",
-                    Default = false,
-                    Callback = function(Value)
-BobFarm = Value
-if game.Players.LocalPlayer.leaderstats.Glove.Value == "Replica" then
-while BobFarm do
-firetouchinterest(game.Players.LocalPlayer.Character:WaitForChild("Head"), workspace.Lobby.Teleport1, 0)
-firetouchinterest(game.Players.LocalPlayer.Character:WaitForChild("Head"), workspace.Lobby.Teleport1, 1)
-repeat task.wait() until game.Players.LocalPlayer.Character:FindFirstChildWhichIsA("Tool")
-game:GetService('VirtualInputManager'):SendKeyEvent(true,'E',false,x)
-game:GetService("ReplicatedStorage"):WaitForChild("HumanoidDied"):FireServer(game.Players.LocalPlayer.Character,false)
-wait(3.5)
-end
-elseif Value == true then
-OrionLib:MakeNotification({Name = "Error",Content = "You don't have Replica equipped.",Image = "rbxassetid://7733658504",Time = 5})
-wait(0.05)
-BOB:Set(false)
-end
-                    end    
-                })
-
-Tab6:AddButton({
-	Name = "Get Brazil badge",
-	Callback = function()
-game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = game.workspace.Lobby.brazil.portal.CFrame
-                    end    
-                })
-
-Tab6:AddButton({
-	Name = "Get court evidence badge",
-	Callback = function()
-fireclickdetector(game.Workspace.Lobby.Scene.knofe.ClickDetector)
-                    end    
-                })
-
-Tab6:AddButton({
-	Name = "Get duck badge",
-	Callback = function()
-fireclickdetector(game.Workspace.Arena["default island"]["Rubber Ducky"].ClickDetector)
-                    end    
-                })
-
-Tab6:AddButton({
-	Name = "Get The Lone Orange badge",
-	Callback = function()
-fireclickdetector(game.Workspace.Arena.island5.Orange.ClickDetector)
-                    end    
-                })
-
-if game.Workspace:FindFirstChild("NoChanged") == nil then
-local NoChanged = Instance.new("BoolValue", workspace)
-NoChanged.Name = "NoChanged"
-end
-Tab3:AddToggle({
-                    Name = "Toggle All Antis",
-                    Default = false,
-                    Callback = function(Value)
-game.Workspace.NoChanged.Value = Value
-end
-})
-
-AA = Tab3:AddToggle({
-                    Name = "Anti Admins",
-                    Default = false,
-                    Callback = function(Value)
-AntiAdmins = Value
-while AntiAdmins do
-for i,v in pairs(game.Players:GetChildren()) do
-                    if v:GetRankInGroup(9950771) >= 2 then
-AK:Set(false)
-                        game.Players.LocalPlayer:Kick("High Rank Player Detected.".." ("..v.Name..")")
-                        break
-                    end
-                end
-task.wait()
-end
-end
-})
-
-AK = Tab3:AddToggle({
-                    Name = "Anti Kick",
-                    Default = false,
-                    Callback = function(Value)
-AntiKick = Value
-while AntiKick do
-for i,v in pairs(game.CoreGui.RobloxPromptGui.promptOverlay:GetDescendants()) do
-                    if v.Name == "ErrorPrompt" then
-game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, game.JobId, game.Players.LocalPlayer)
-                    end
-                end
-task.wait()
-end
-end
-})
-
-APL = Tab3:AddToggle({
-                    Name = "Anti Portal",
-                    Default = false,
-                    Callback = function(Value)
-AntiPortal = Value
-if AntiPortal == true then
-workspace.Lobby.Teleport2.CanTouch = false
-workspace.Lobby.Teleport3.CanTouch = false
-workspace.Lobby.Teleport4.CanTouch = false
-workspace.Lobby.Teleport6.CanTouch = false
-else
-workspace.Lobby.Teleport2.CanTouch = true
-workspace.Lobby.Teleport3.CanTouch = true
-workspace.Lobby.Teleport4.CanTouch = true
-workspace.Lobby.Teleport6.CanTouch = true
-end
-end
-})
-
-AR = Tab3:AddToggle({
-                    Name = "Anti Ragdoll (Resets character)",
-                    Default = false,
-                    Callback = function(Value)
-AntiRagdoll = Value
-if AntiRagdoll then
-game.Players.LocalPlayer.Character.Humanoid.Health = 0
-game.Players.LocalPlayer.CharacterAdded:Connect(function()
-game.Players.LocalPlayer.Character:WaitForChild("Ragdolled").Changed:Connect(function()
-if game.Players.LocalPlayer.Character:WaitForChild("Ragdolled").Value == true and AntiRagdoll then
-repeat task.wait() game.Players.LocalPlayer.Character.Torso.Anchored = true
-until game.Players.LocalPlayer.Character:WaitForChild("Ragdolled").Value == false
-game.Players.LocalPlayer.Character.Torso.Anchored = false
-end
-end)
-end)
-end
-                    end    
-                })
-
-game.Workspace.dedBarrier.Position =  Vector3.new(15, -17, 41.5)
-               AV = Tab3:AddToggle({
-                    Name = "Anti Void (Works in tournament)",
-                    Default = false,
-                    Callback = function(Value)
-game.Workspace.dedBarrier.CanCollide = Value
-game.Workspace.TAntiVoid.CanCollide = Value
-                    end    
-                })
-
-               ADB = Tab3:AddToggle({
-                    Name = "Anti Death Barriers",
-                    Default = false,
-                    Callback = function(Value)
-if Value == true then
-for i,v in pairs(game.Workspace.DEATHBARRIER:GetChildren()) do
-                    if v.ClassName == "Part" and v.Name == "BLOCK" then
-                        v.CanTouch = false
-                    end
-                end
-workspace.DEATHBARRIER.CanTouch = false
-workspace.DEATHBARRIER2.CanTouch = false
-workspace.dedBarrier.CanTouch = false
-workspace.ArenaBarrier.CanTouch = false
-workspace.AntiDefaultArena.CanTouch = false
-else
-for i,v in pairs(game.Workspace.DEATHBARRIER:GetChildren()) do
-                    if v.ClassName == "Part" and v.Name == "BLOCK" then
-                        v.CanTouch = true
-                    end
-                end
-workspace.DEATHBARRIER.CanTouch = true
-workspace.DEATHBARRIER2.CanTouch = true
-workspace.dedBarrier.CanTouch = true
-workspace.ArenaBarrier.CanTouch = true
-workspace.AntiDefaultArena.CanTouch = true
-end
-                    end    
-                })
-
-               AB = Tab3:AddToggle({
-                    Name = "Anti Brazil",
-                    Default = false,
-                    Callback = function(Value)
-if Value == true then
-for i,v in pairs(game.Workspace.Lobby.brazil:GetChildren()) do
-                        v.CanTouch = false
-                end
-else
-for i,v in pairs(game.Workspace.Lobby.brazil:GetChildren()) do
-                        v.CanTouch = true
-                end
-end
-                    end    
-                })
-
-               ACOD = Tab3:AddToggle({
-                    Name = "Anti Cube of Death",
-                    Default = false,
-                    Callback = function(Value)
-if Value == true then
-        workspace.Arena.CubeOfDeathArea["the cube of death(i heard it kills)"].CanTouch = false
-        else
-        workspace.Arena.CubeOfDeathArea["the cube of death(i heard it kills)"].CanTouch = true
+            end)
         end
-                    end    
-                })
+    end,
+})
 
-               AT = Tab3:AddToggle({
-                    Name = "Anti Timestop",
-                    Default = false,
-                    Callback = function(Value)
-AntiTimestop = Value
-while AntiTimestop do
-                for i,v in pairs(game.Players.LocalPlayer.Character:GetChildren()) do
-                    if v.ClassName == "Part" then
-                        v.Anchored = false
-                    end
-                end
-task.wait()
-end
-                    end    
-                })
+BossFarmSection:Dropdown({
+    Title="Difficulty", Values=Tables.DiffList, Value="Normal", Multi=false,
+    Callback=function(s) _G.BossDiff = s end,
+})
 
-               AS = Tab3:AddToggle({
-                    Name = "Anti Squid",
-                    Default = false,
-                    Callback = function(Value)
-AntiSquid = Value
-if AntiSquid == false then
-        game.Players.LocalPlayer.PlayerGui.SquidInk.Enabled = true
+BossFarmSection:Dropdown({
+    Title="Select Summon Boss", Values=Tables.SummonList, Value=nil, Multi=false, AllowNull=true,
+    Callback=function(s) _G.SelectedSummon = s end,
+})
+
+BossFarmSection:Button({
+    Title="Spawn Selected Boss", Desc="",
+    Callback=function()
+        if _G.SelectedSummon then
+            FireBossRemote(_G.SelectedSummon, _G.BossDiff or "Normal")
+            WindUI:Notify({ Title="Spawning", Content="Spawning ".._G.SelectedSummon, Duration=2, Icon="bone" })
         end
-while AntiSquid do
-if game.Players.LocalPlayer.PlayerGui:FindFirstChild("SquidInk") then
-        game.Players.LocalPlayer.PlayerGui.SquidInk.Enabled = false
-end
-task.wait()
-end
-                    end    
-                })
+    end,
+})
 
-               AHJ = Tab3:AddToggle({
-                    Name = "Anti Hallow Jack",
-                    Default = false,
-                    Callback = function(Value)
-game.Players.LocalPlayer.PlayerScripts.HallowJackAbilities.Disabled = Value
-                    end    
-                })
-
-               AC = Tab3:AddToggle({
-                    Name = "Anti Conveyor",
-                    Default = false,
-                    Callback = function(Value)
-game.Players.LocalPlayer.PlayerScripts.ConveyorVictimized.Disabled = Value
-                    end    
-                })
-
-               ABK = Tab3:AddToggle({
-                    Name = "Anti Brick",
-                    Default = false,
-                    Callback = function(Value)
-AntiBrick = Value
-while AntiBrick do
-for i,v in pairs(game.Workspace:GetChildren()) do
-                    if v.Name == "Union" then
-                        v.CanTouch = false
+BossFarmSection:Toggle({
+    Title="Auto Farm Summon Boss", Icon="bone",
+    Type="Checkbox", Value=false,
+    Callback=function(state)
+        _G.AutoSummonFarm = state
+        if state then
+            task.spawn(function()
+                while _G.AutoSummonFarm do
+                    if _G.SelectedSummon then
+                        local found = false
+                        local workspaceName = SummonMap[_G.SelectedSummon] or (_G.SelectedSummon.."Boss")
+                        for _, npc in pairs(PATH.Mobs:GetChildren()) do
+                            if npc.Name:lower():find(workspaceName:lower()) and IsValidTarget(npc) then
+                                local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+                                if root then root.CFrame = npc:GetPivot() * CFrame.new(0,0,10) end
+                                pcall(function() Remotes.M1:FireServer(npc:GetPivot().Position) end)
+                                found = true; break
+                            end
+                        end
+                        if not found then
+                            FireBossRemote(_G.SelectedSummon, _G.BossDiff or "Normal")
+                            task.wait(1)
+                        end
                     end
+                    task.wait(0.1)
                 end
-task.wait()
-end
-                    end    
-                })
+            end)
+        end
+    end,
+})
 
-               AN = Tab3:AddToggle({
-                    Name = "Anti Null",
-                    Default = false,
-                    Callback = function(Value)
-AntiNull = Value
-while AntiNull do
-for i,v in pairs(game.Workspace:GetChildren()) do
-                    if v.Name == "Imp" and v:FindFirstChild("Body") then
-shared.gloveHits[game.Players.LocalPlayer.leaderstats.Glove.Value]:FireServer(v.Body,true)
-end
-end
-task.wait()
-end
-                    end    
-                })
+-- Pity Boss Section
+local PitySection = Tabs.Boss:Section({ Title="Pity Boss Farm", Box=true, Opened=false })
 
-               ARD = Tab3:AddToggle({
-                    Name = "Anti [REDACTED]",
-                    Default = false,
-                    Callback = function(Value)
-game.Players.LocalPlayer.PlayerScripts.Well.Disabled = Value
-                    end    
-                })
+PitySection:Dropdown({
+    Title="Build Pity Boss", Values=Tables.AllBossList, Value=nil, Multi=true, AllowNull=true,
+    Callback=function(s) _G.PityBuildBoss = s end,
+})
 
-               AZ = Tab3:AddToggle({
-                    Name = "Anti Za Hando",
-                    Default = false,
-                    Callback = function(Value)
-AntiZaHando = Value
-            while AntiZaHando do
-                for i,v in pairs(game.Workspace:GetChildren()) do
-                    if v.ClassName == "Part" and v.Name == "Part" then
-                        v:Destroy()
+PitySection:Dropdown({
+    Title="Use Pity Boss", Values=Tables.AllBossList, Value=nil, Multi=false, AllowNull=true,
+    Callback=function(s) _G.PityUseBoss = s end,
+})
+
+PitySection:Dropdown({
+    Title="Pity Difficulty", Values=Tables.DiffList, Value="Normal", Multi=false,
+    Callback=function(s) _G.PityDiff = s end,
+})
+
+PitySection:Toggle({
+    Title="Auto Farm Pity Boss", Icon="skull",
+    Type="Checkbox", Value=false,
+    Callback=function(state)
+        _G.PityFarmActive = state
+        if state then
+            task.spawn(function()
+                while _G.PityFarmActive do
+                    local current, max = GetCurrentPity()
+                    local isUseTurn = (current >= (max - 1))
+                    if isUseTurn and _G.PityUseBoss then
+                        local found = false
+                        for _, npc in pairs(PATH.Mobs:GetChildren()) do
+                            if IsStrictBossMatch(npc.Name, _G.PityUseBoss) and IsValidTarget(npc) then
+                                local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+                                if root then root.CFrame = npc:GetPivot() * CFrame.new(0,0,10) end
+                                pcall(function() Remotes.M1:FireServer(npc:GetPivot().Position) end)
+                                found = true; break
+                            end
+                        end
+                        if not found then FireBossRemote(_G.PityUseBoss, _G.PityDiff or "Normal"); task.wait(1) end
+                    elseif _G.PityBuildBoss then
+                        for bossName, enabled in pairs(_G.PityBuildBoss) do
+                            if enabled then
+                                local found = false
+                                for _, npc in pairs(PATH.Mobs:GetChildren()) do
+                                    if IsStrictBossMatch(npc.Name, bossName) and IsValidTarget(npc) then
+                                        local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+                                        if root then root.CFrame = npc:GetPivot() * CFrame.new(0,0,10) end
+                                        pcall(function() Remotes.M1:FireServer(npc:GetPivot().Position) end)
+                                        found = true; break
+                                    end
+                                end
+                                if not found then FireBossRemote(bossName, "Normal"); task.wait(1) end
+                                break
+                            end
+                        end
                     end
+                    task.wait(0.1)
                 end
-task.wait()
+            end)
+        end
+    end,
+})
+
+-- ============================================================
+--  DUNGEON TAB
+-- ============================================================
+local DungeonSection = Tabs.Dungeon:Section({ Title="Dungeon Unlock", Box=true, Opened=true })
+
+DungeonSection:Toggle({
+    Title="Auto Unlock Dungeon", Desc="Collects all dungeon puzzle pieces", Icon="flame",
+    Type="Checkbox", Value=false,
+    Callback=function(v)
+        if not v then return end
+        task.spawn(function()
+            _G.UnlockDungeon = true
+            local dungeonPieces = {
+                {portal="Starter",      piece="StarterIsland.DungeonPuzzlePiece"},
+                {portal="Jungle",       piece="JungleIsland.DungeonPuzzlePiece"},
+                {portal="Desert",       piece="DesertIsland.DungeonPuzzlePiece"},
+                {portal="Snow",         piece="SnowIsland.DungeonPuzzlePiece"},
+                {portal="Shibuya",      piece="ShibuyaStation.DungeonPuzzlePiece"},
+                {portal="HollowIsland", piece="HollowIsland.DungeonPuzzlePiece"},
+            }
+            replicated.Remotes.TeleportToPortal:FireServer("Dungeon")
+            WindUI:Notify({ Title="Dungeon Unlock", Content="Going to Dungeon NPC", Duration=2, Icon="map" })
+            task.wait(1.5)
+            Tween2(workspace.ServiceNPCs.DungeonPortalsNPC.HumanoidRootPart.CFrame)
+            task.wait(0.1)
+            vim1:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+            task.wait(0.5)
+            vim1:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+            task.wait(1)
+            for _, entry in ipairs(dungeonPieces) do
+                replicated.Remotes.TeleportToPortal:FireServer(entry.portal)
+                WindUI:Notify({ Title="Dungeon Pieces", Content="Going to "..entry.portal, Duration=2, Icon="map" })
+                task.wait(2.5)
+                local parts = entry.piece:split(".")
+                local obj = workspace
+                for _, p in ipairs(parts) do obj = obj:FindFirstChild(p) or obj end
+                if obj and obj ~= workspace then
+                    Tween2(obj.CFrame)
+                    task.wait(0.5)
+                    vim1:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+                    task.wait(0.5)
+                    vim1:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+                    task.wait(1)
+                end
             end
-                    end    
-                })
-
-               ARR = Tab3:AddToggle({
-                    Name = "Anti Reaper",
-                    Default = false,
-                    Callback = function(Value)
-AntiReaper = Value
-            while AntiReaper do
-for i,v in pairs(game.Players.LocalPlayer.Character:GetDescendants()) do
-                    if v.Name == "DeathMark" then
-                        game:GetService("ReplicatedStorage").ReaperGone:FireServer(v)
-                    game:GetService("Lighting"):WaitForChild("DeathMarkColorCorrection"):Destroy() 
-                    end
-                end
-task.wait()
-end
-                    end    
-                })
-
-               AP = Tab3:AddToggle({
-                    Name = "Anti Pusher",
-                    Default = false,
-                    Callback = function(Value)
-AntiPusher = Value
-            while AntiPusher do
-for i,v in pairs(game.Workspace:GetChildren()) do
-                    if v.Name == "wall" then
-                        v.CanCollide = false
-                    end
-                end
-task.wait()
-end
-                    end    
-                })
-
-               ABR = Tab3:AddToggle({
-                    Name = "Anti Booster",
-                    Default = false,
-                    Callback = function(Value)
-AntiBooster = Value
-while AntiBooster do
-for i,v in pairs(game.Players.LocalPlayer.Character:GetDescendants()) do
-                    if v.Name == "BoosterObject" then
-                        v:Destroy()
-                    end
-                end
-task.wait()
-end
-                    end    
-                })
-
-               AM = Tab3:AddToggle({
-                    Name = "Anti Mail",
-                    Default = false,
-                    Callback = function(Value)
-game.Players.LocalPlayer.Character.YouHaveGotMail.Disabled = Value
-AntiMail = Value
-while AntiMail do
-if game.Players.LocalPlayer.Character:FindFirstChild("YouHaveGotMail") then
-        game.Players.LocalPlayer.Character.YouHaveGotMail.Disabled = true
-end
-task.wait()
-end
-                    end    
-                })
-
-              ASN = Tab3:AddToggle({
-                    Name = "Anti Stun",
-                    Default = false,
-                    Callback = function(Value)
-AntiStun = Value
-while AntiStun do
-if game.Players.LocalPlayer.Character:FindFirstChild("Humanoid") ~= nil and game.Workspace:FindFirstChild("Shockwave") and game.Players.LocalPlayer.Character.Ragdolled.Value == false then
-game.Players.LocalPlayer.Character.Humanoid.PlatformStand = false
-end
-task.wait()
-end
-                    end    
-                })
-
-               AMC = Tab3:AddToggle({
-                    Name = "Anti Megarock/Custom",
-                    Default = false,
-                    Callback = function(Value)
-AntiRock = Value
-while AntiRock do
-for i,v in pairs(game.Workspace:GetDescendants()) do
-                    if v.Name == "rock" then
-                        v.CanTouch = false
-                        v.CanQuery = false
-                    end
-                end
-task.wait()
-end
-                    end    
-                })
-
-AREC = Tab3:AddToggle({
-                    Name = "Anti Record (Detects chat msgs)",
-                    Default = false,
-                    Callback = function(Value)
-AntiRecord = Value
-end
+            WindUI:Notify({ Title="Dungeon Unlocked!", Content="All pieces collected!", Duration=3, Icon="check" })
+            _G.UnlockDungeon = false
+        end)
+    end,
 })
-for i,p in pairs(game.Players:GetChildren()) do
-if p ~= game.Players.LocalPlayer then
-p.Chatted:Connect(function(message)
-Words = message:split(" ")
-if AntiRecord == true then
-for i, v in pairs(Words) do
-if v:lower():match("recording") or v:lower():match(" rec") or v:lower():match("record") or v:lower():match("discor") or v:lower():match(" disco") or v:lower():match(" disc") or v:lower():match("ticket") or v:lower():match("tickets") or v:lower():match(" ds") or v:lower():match(" dc") or v:lower():match("dizzy") or v:lower():match("dizzycord") or v:lower():match(" clip") or v:lower():match("proof") or v:lower():match("evidence") then
-AK:Set(false)
-game.Players.LocalPlayer:Kick("Possible player recording detected.".." ("..p.Name..")".." ("..message..")")
+
+-- Dungeon Piece Buttons
+local DungeonPieces = Tabs.Dungeon:Section({ Title="Dungeon Pieces", Box=true, Opened=true })
+
+local dungeonPieceList = {
+    {label="Starter",      portal="Starter",      path="StarterIsland.DungeonPuzzlePiece"},
+    {label="Jungle",       portal="Jungle",       path="JungleIsland.DungeonPuzzlePiece"},
+    {label="Desert",       portal="Desert",       path="DesertIsland.DungeonPuzzlePiece"},
+    {label="Snow Island",  portal="Snow",         path="SnowIsland.DungeonPuzzlePiece"},
+    {label="Shibuya",      portal="Shibuya",      path="ShibuyaStation.DungeonPuzzlePiece"},
+    {label="Hollow Island",portal="HollowIsland", path="HollowIsland.DungeonPuzzlePiece"},
+}
+
+for _, dp in ipairs(dungeonPieceList) do
+    DungeonPieces:Button({
+        Title="Teleport: "..dp.label, Desc="",
+        Callback=function()
+            replicated.Remotes.TeleportToPortal:FireServer(dp.portal)
+            WindUI:Notify({ Title="Teleporting", Content=dp.label, Duration=2, Icon="map" })
+            task.wait(3)
+            local parts = dp.path:split(".")
+            local obj = workspace
+            for _, p in ipairs(parts) do obj = obj:FindFirstChild(p) or obj end
+            if obj and obj ~= workspace then
+                Tween2(obj.CFrame)
+                task.wait(0.5)
+                vim1:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+                task.wait(0.5)
+                vim1:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+            end
+        end,
+    })
 end
-end
-end
-end)
-end
-end
-game.Players.PlayerAdded:Connect(function(Player)
-Player.Chatted:Connect(function(message)
-Words = message:split(" ")
-if AntiRecord == true then
-for i, v in pairs(Words) do
-if v:lower():match("recording") or v:lower():match(" rec") or v:lower():match("record") or v:lower():match("discor") or v:lower():match(" disco") or v:lower():match(" disc") or v:lower():match("ticket") or v:lower():match("tickets") or v:lower():match(" ds") or v:lower():match(" dc") or v:lower():match("dizzy") or v:lower():match("dizzycord") or v:lower():match(" clip") or v:lower():match("proof") or v:lower():match("evidence") then
-AK:Set(false)
-game.Players.LocalPlayer:Kick("Possible player recording detected.".." ("..Player.Name..")".." ("..message..")")
-end
-end
-end
-end)
-end)
 
-game.Workspace.NoChanged.Changed:Connect(function()
-AA:Set(game.Workspace.NoChanged.Value)
-end)
+-- Auto Dungeon Section
+local AutoDungeonSection = Tabs.Dungeon:Section({ Title="Auto Dungeon", Box=true, Opened=false })
 
-game.Workspace.NoChanged.Changed:Connect(function()
-wait(.05)
-AK:Set(game.Workspace.NoChanged.Value)
-end)
+AutoDungeonSection:Dropdown({
+    Title="Select Dungeon", Values=Tables.DungeonList, Value=nil, Multi=false, AllowNull=true,
+    Callback=function(s) _G.SelectedDungeon = s end,
+})
 
-game.Workspace.NoChanged.Changed:Connect(function()
-wait(.1)
-APL:Set(game.Workspace.NoChanged.Value)
-end)
+AutoDungeonSection:Toggle({
+    Title="Auto Join Dungeon", Icon="door-open",
+    Type="Checkbox", Value=false,
+    Callback=function(state)
+        _G.AutoDungeon = state
+        if state then
+            task.spawn(function()
+                while _G.AutoDungeon do
+                    task.wait(1)
+                    if not _G.SelectedDungeon then continue end
+                    pcall(function()
+                        local leaveBtn = PGui.DungeonPortalJoinUI.LeaveButton
+                        if leaveBtn and leaveBtn.Visible then return end
+                        local targetIsland = "Dungeon"
+                        if _G.SelectedDungeon == "BossRush" then targetIsland = "Sailor"
+                        elseif _G.SelectedDungeon == "InfiniteTower" then targetIsland = "TowerIsland" end
+                        if tick() - Shared.LastDungeon > 15 then
+                            Remotes.OpenDungeon:FireServer(tostring(_G.SelectedDungeon))
+                            Shared.LastDungeon = tick()
+                            task.wait(1)
+                        end
+                        local portal = workspace:FindFirstChild("ActiveDungeonPortal")
+                        if not portal then
+                            if Shared.Island ~= targetIsland then
+                                Remotes.TP_Portal:FireServer(targetIsland)
+                                Shared.Island = targetIsland
+                                task.wait(2.5)
+                            end
+                        else
+                            local root = GetCharacter() and GetCharacter():FindFirstChild("HumanoidRootPart")
+                            if root then
+                                root.CFrame = portal.CFrame
+                                task.wait(0.2)
+                                local prompt = portal:FindFirstChild("JoinPrompt")
+                                if prompt and Support.Proximity then
+                                    fireproximityprompt(prompt); task.wait(1)
+                                end
+                            end
+                        end
+                    end)
+                end
+            end)
+        end
+    end,
+})
 
-game.Workspace.NoChanged.Changed:Connect(function()
-wait(.15)
-AR:Set(game.Workspace.NoChanged.Value)
-end)
+-- Puzzle Buttons
+local PuzzleSection = Tabs.Dungeon:Section({ Title="Puzzle Solvers", Box=true, Opened=false })
 
-game.Workspace.NoChanged.Changed:Connect(function()
-wait(.2)
-AV:Set(game.Workspace.NoChanged.Value)
-end)
+PuzzleSection:Button({
+    Title="Complete Dungeon Puzzle", Desc="Requires Lv.5000+",
+    Callback=function()
+        local level = player.Data and player.Data.Level and player.Data.Level.Value or 0
+        if level >= 5000 then
+            task.spawn(function() UniversalPuzzleSolver("Dungeon") end)
+        else
+            WindUI:Notify({ Title="Error", Content="Level 5000 required! (You: "..level..")", Duration=3, Icon="alert-triangle" })
+        end
+    end,
+})
 
-game.Workspace.NoChanged.Changed:Connect(function()
-wait(.25)
-ADB:Set(game.Workspace.NoChanged.Value)
-end)
+PuzzleSection:Button({
+    Title="Complete Slime Puzzle",
+    Callback=function() task.spawn(function() UniversalPuzzleSolver("Slime") end) end,
+})
 
-game.Workspace.NoChanged.Changed:Connect(function()
-wait(.3)
-AB:Set(game.Workspace.NoChanged.Value)
-end)
+PuzzleSection:Button({
+    Title="Complete Demonite Puzzle",
+    Callback=function() task.spawn(function() UniversalPuzzleSolver("Demonite") end) end,
+})
 
-game.Workspace.NoChanged.Changed:Connect(function()
-wait(.35)
-ACOD:Set(game.Workspace.NoChanged.Value)
-end)
+PuzzleSection:Button({
+    Title="Complete Hogyoku Puzzle", Desc="Requires Lv.8500+",
+    Callback=function()
+        local level = player.Data and player.Data.Level and player.Data.Level.Value or 0
+        if level >= 8500 then
+            task.spawn(function() UniversalPuzzleSolver("Hogyoku") end)
+        else
+            WindUI:Notify({ Title="Error", Content="Level 8500 required! (You: "..level..")", Duration=3, Icon="alert-triangle" })
+        end
+    end,
+})
 
-game.Workspace.NoChanged.Changed:Connect(function()
-wait(.4)
-AT:Set(game.Workspace.NoChanged.Value)
-end)
+-- ============================================================
+--  AUTOMATION TAB
+-- ============================================================
+local AutoCraftSection = Tabs.Automation:Section({ Title="Auto Craft", Box=true, Opened=true })
 
-game.Workspace.NoChanged.Changed:Connect(function()
-wait(.45)
-AS:Set(game.Workspace.NoChanged.Value)
-end)
+AutoCraftSection:Dropdown({
+    Title="Select Item(s) to Craft", Values=Tables.CraftItemList, Value=nil, Multi=true,
+    Callback=function(s) _G.SelectedCraftItems = s end,
+})
 
-game.Workspace.NoChanged.Changed:Connect(function()
-wait(.5)
-AHJ:Set(game.Workspace.NoChanged.Value)
-end)
+AutoCraftSection:Toggle({
+    Title="Auto Craft Item", Icon="hammer",
+    Type="Checkbox", Value=false,
+    Callback=function(state)
+        _G.AutoCraftItem = state
+        if state then
+            task.spawn(function()
+                while _G.AutoCraftItem do
+                    for _, item in pairs(Shared.Cached.Inv) do
+                        local selected = _G.SelectedCraftItems or {}
+                        if selected["DivineGrail"] and item.name == "Broken Sword" and item.quantity >= 3 then
+                            local amt = math.min(math.floor(item.quantity/3), 99)
+                            pcall(function() Remotes.GrailCraft:InvokeServer("DivineGrail", amt) end)
+                            task.wait(0.5)
+                        end
+                        if selected["SlimeKey"] and item.name == "Slime Shard" and item.quantity >= 2 then
+                            local amt = math.min(math.floor(item.quantity/2), 99)
+                            pcall(function() Remotes.SlimeCraft:InvokeServer("SlimeKey", amt) end)
+                            task.wait(0.5)
+                        end
+                    end
+                    task.wait(1)
+                end
+            end)
+        end
+    end,
+})
 
-game.Workspace.NoChanged.Changed:Connect(function()
-wait(.55)
-AC:Set(game.Workspace.NoChanged.Value)
-end)
+-- Auto Enchant / Blessing
+local EnchantSection = Tabs.Automation:Section({ Title="Auto Enchant & Blessing", Box=true, Opened=true })
 
-game.Workspace.NoChanged.Changed:Connect(function()
-wait(.6)
-ABK:Set(game.Workspace.NoChanged.Value)
-end)
+EnchantSection:Dropdown({
+    Title="Select Accessory (Enchant)", Values=Tables.OwnedAccessory, Value=nil, Multi=true,
+    Callback=function(s) _G.SelectedEnchant = s end,
+})
 
-game.Workspace.NoChanged.Changed:Connect(function()
-wait(.65)
-AN:Set(game.Workspace.NoChanged.Value)
-end)
+EnchantSection:Toggle({
+    Title="Auto Enchant", Icon="sparkles",
+    Type="Checkbox", Value=false,
+    Callback=function(state)
+        _G.AutoEnchant = state
+        if state then task.spawn(function() AutoUpgradeLoop("Enchant") end) end
+    end,
+})
 
-game.Workspace.NoChanged.Changed:Connect(function()
-wait(.7)
-ARD:Set(game.Workspace.NoChanged.Value)
-end)
+EnchantSection:Dropdown({
+    Title="Select Weapon (Blessing)", Values=Tables.OwnedWeapon, Value=nil, Multi=true,
+    Callback=function(s) _G.SelectedBlessing = s end,
+})
 
-game.Workspace.NoChanged.Changed:Connect(function()
-wait(.75)
-AZ:Set(game.Workspace.NoChanged.Value)
-end)
+EnchantSection:Toggle({
+    Title="Auto Blessing", Icon="star",
+    Type="Checkbox", Value=false,
+    Callback=function(state)
+        _G.AutoBlessing = state
+        if state then task.spawn(function() AutoUpgradeLoop("Blessing") end) end
+    end,
+})
 
-game.Workspace.NoChanged.Changed:Connect(function()
-wait(.8)
-ARR:Set(game.Workspace.NoChanged.Value)
-end)
+-- Auto Roll Section
+local RollSection = Tabs.Automation:Section({ Title="Auto Rolls", Box=true, Opened=true })
 
-game.Workspace.NoChanged.Changed:Connect(function()
-wait(.85)
-AP:Set(game.Workspace.NoChanged.Value)
-end)
+RollSection:Slider({
+    Title="Roll Delay (s)", Step=0.01, Value={Min=0.01, Max=2, Default=0.3},
+    Callback=function(v) _G.RollDelay = v end,
+})
 
-game.Workspace.NoChanged.Changed:Connect(function()
-wait(.9)
-ABR:Set(game.Workspace.NoChanged.Value)
-end)
+RollSection:Dropdown({
+    Title="Target Trait(s)", Values=Tables.TraitList, Value=nil, Multi=true,
+    Callback=function(s) _G.TargetTraits = s end,
+})
 
-game.Workspace.NoChanged.Changed:Connect(function()
-wait(.95)
-AM:Set(game.Workspace.NoChanged.Value)
-end)
+RollSection:Toggle({
+    Title="Auto Roll Trait", Icon="dice",
+    Type="Checkbox", Value=false,
+    Callback=function(state)
+        _G.AutoRollTrait = state
+        if state then
+            task.spawn(function()
+                while _G.AutoRollTrait do
+                    pcall(function()
+                        local traitUI = PGui:FindFirstChild("TraitRerollUI")
+                        if traitUI then
+                            local currentTrait = traitUI.MainFrame.Frame.Content.TraitPage.TraitGottenFrame.Holder.Trait.TraitGotten.Text
+                            local selected = _G.TargetTraits or {}
+                            if selected[currentTrait] then
+                                WindUI:Notify({ Title="Success!", Content="Got trait: "..currentTrait, Duration=5, Icon="check" })
+                                _G.AutoRollTrait = false; return
+                            end
+                            local confirmFrame = traitUI.MainFrame.Frame.Content:FindFirstChild("AreYouSureYouWantToRerollFrame")
+                            if confirmFrame and confirmFrame.Visible then
+                                Remotes.TraitConfirm:FireServer(true); task.wait(0.1)
+                            end
+                            Remotes.Roll_Trait:FireServer()
+                        end
+                    end)
+                    task.wait(_G.RollDelay or 0.3)
+                end
+            end)
+        end
+    end,
+})
 
-game.Workspace.NoChanged.Changed:Connect(function()
-wait(1)
-ASN:Set(game.Workspace.NoChanged.Value)
-end)
+RollSection:Dropdown({
+    Title="Target Race(s)", Values=Tables.RaceList, Value=nil, Multi=true,
+    Callback=function(s) _G.TargetRaces = s end,
+})
 
-game.Workspace.NoChanged.Changed:Connect(function()
-wait(1.05)
-AMC:Set(game.Workspace.NoChanged.Value)
-end)
+RollSection:Toggle({
+    Title="Auto Roll Race", Icon="users",
+    Type="Checkbox", Value=false,
+    Callback=function(state)
+        _G.AutoRollRace = state
+        if state then
+            task.spawn(function()
+                while _G.AutoRollRace do
+                    local currentRace = player:GetAttribute("CurrentRace")
+                    local selected = _G.TargetRaces or {}
+                    if selected[currentRace] then
+                        WindUI:Notify({ Title="Success!", Content="Got race: "..tostring(currentRace), Duration=5, Icon="check" })
+                        _G.AutoRollRace = false; break
+                    end
+                    pcall(function() Remotes.UseItem:FireServer("Use", "Race Reroll", 1) end)
+                    task.wait(_G.RollDelay or 0.3)
+                end
+            end)
+        end
+    end,
+})
 
-game.Workspace.NoChanged.Changed:Connect(function()
-wait(1.1)
-AREC:Set(game.Workspace.NoChanged.Value)
-end)
+RollSection:Dropdown({
+    Title="Target Clan(s)", Values=Tables.ClanList, Value=nil, Multi=true,
+    Callback=function(s) _G.TargetClans = s end,
+})
 
-local Gloves = loadstring(game:HttpGet("https://raw.githubusercontent.com/ionlyusegithubformcmods/1-Line-Scripts/main/More%20Gloves.lua"))()
-end
-for i,v in pairs(gethui().Orion:GetDescendants()) do
-                    if v.ClassName == "Frame" and v.BackgroundTransparency < 0.3 then
-v.BackgroundTransparency = 0.05
+RollSection:Toggle({
+    Title="Auto Roll Clan", Icon="flag",
+    Type="Checkbox", Value=false,
+    Callback=function(state)
+        _G.AutoRollClan = state
+        if state then
+            task.spawn(function()
+                while _G.AutoRollClan do
+                    local currentClan = player:GetAttribute("CurrentClan")
+                    local selected = _G.TargetClans or {}
+                    if selected[currentClan] then
+                        WindUI:Notify({ Title="Success!", Content="Got clan: "..tostring(currentClan), Duration=5, Icon="check" })
+                        _G.AutoRollClan = false; break
+                    end
+                    pcall(function() Remotes.UseItem:FireServer("Use", "Clan Reroll", 1) end)
+                    task.wait(_G.RollDelay or 0.3)
+                end
+            end)
+        end
+    end,
+})
+
+-- Ascend Section
+local AscendSection = Tabs.Automation:Section({ Title="Auto Ascend", Box=true, Opened=false })
+
+AscendSection:Toggle({
+    Title="Auto Ascend", Icon="arrow-up",
+    Type="Checkbox", Value=false,
+    Callback=function(state)
+        _G.AutoAscend = state
+        if state then
+            pcall(function()
+                if Remotes.ReqAscend then Remotes.ReqAscend:InvokeServer() end
+            end)
+            if Remotes.UpAscend then
+                Remotes.UpAscend.OnClientEvent:Connect(function(data)
+                    if not _G.AutoAscend then return end
+                    if data and data.allMet then
+                        WindUI:Notify({ Title="Ascending!", Content="All requirements met!", Duration=3, Icon="arrow-up" })
+                        pcall(function() Remotes.Ascend:FireServer() end)
+                        task.wait(1)
+                    end
+                    if data and data.isMaxed then
+                        WindUI:Notify({ Title="Max Ascension!", Content="Already at max!", Duration=3, Icon="star" })
+                        _G.AutoAscend = false
+                    end
+                end)
+            end
+        end
+    end,
+})
+
+-- Skill Tree Section
+local SkillTreeSection = Tabs.Automation:Section({ Title="Skill Tree", Box=true, Opened=false })
+
+SkillTreeSection:Toggle({
+    Title="Auto Skill Tree", Icon="git-branch",
+    Type="Checkbox", Value=false,
+    Callback=function(state)
+        _G.AutoSkillTree = state
+        if state then
+            task.spawn(function()
+                while _G.AutoSkillTree do
+                    task.wait(0.5)
+                    if not Modules.SkillTree or not Modules.SkillTree.Branches then continue end
+                    local points = Shared.SkillTree.SkillPoints or 0
+                    if points <= 0 then continue end
+                    for _, branch in pairs(Modules.SkillTree.Branches) do
+                        for _, node in ipairs(branch.Nodes) do
+                            if not Shared.SkillTree.Nodes[node.Id] then
+                                if points >= node.Cost then
+                                    pcall(function() Remotes.SkillTreeUpgrade:FireServer(node.Id) end)
+                                    Shared.SkillTree.SkillPoints = points - node.Cost
+                                    task.wait(0.3)
+                                end
+                                break
+                            end
+                        end
                     end
                 end
-for i,v in pairs(gethui().Orion:GetDescendants()) do
-                    if v.ClassName == "Frame" and v.BackgroundTransparency < 0.3 and v.BackgroundColor3 == Color3.fromRGB(32, 32, 42) then
-v.BackgroundTransparency = 1
+            end)
+        end
+    end,
+})
+
+-- Artifact Milestone Section
+local ArtifactMilestoneSection = Tabs.Automation:Section({ Title="Artifact Milestone", Box=true, Opened=false })
+
+ArtifactMilestoneSection:Toggle({
+    Title="Auto Claim Artifact Milestones", Icon="award",
+    Type="Checkbox", Value=false,
+    Callback=function(state)
+        _G.AutoArtifactMilestone = state
+        if state then
+            task.spawn(function()
+                local milestone = 1
+                while _G.AutoArtifactMilestone do
+                    pcall(function() Remotes.ArtifactClaim:FireServer(milestone) end)
+                    milestone = milestone + 1
+                    if milestone > 40 then milestone = 1 end
+                    task.wait(1)
+                end
+            end)
+        end
+    end,
+})
+
+-- Merchant Section
+local MerchantSection = Tabs.Automation:Section({ Title="Auto Merchant", Box=true, Opened=false })
+
+MerchantSection:Dropdown({
+    Title="Select Merchant Items", Values=Tables.MerchantList, Value=nil, Multi=true,
+    Callback=function(s) _G.SelectedMerchantItems = s end,
+})
+
+MerchantSection:Toggle({
+    Title="Auto Buy Merchant Items", Icon="shopping-cart",
+    Type="Checkbox", Value=false,
+    Callback=function(state)
+        _G.AutoMerchant = state
+        if state then
+            task.spawn(function()
+                while _G.AutoMerchant do
+                    local selected = _G.SelectedMerchantItems or {}
+                    for itemName, enabled in pairs(selected) do
+                        if enabled then
+                            pcall(function() Remotes.MerchantBuy:InvokeServer(itemName, 99) end)
+                            task.wait(1.5)
+                        end
+                    end
+                    task.wait(30)
+                end
+            end)
+        end
+    end,
+})
+
+-- Redeem Codes
+local CodesSection = Tabs.Automation:Section({ Title="Codes", Box=true, Opened=false })
+
+CodesSection:Button({
+    Title="Redeem All Codes", Desc="Attempts to redeem all available codes",
+    Callback=function()
+        task.spawn(function()
+            local allCodes = (Modules.Codes and Modules.Codes.Codes) or {}
+            local playerLevel = player.Data and player.Data.Level and player.Data.Level.Value or 0
+            for codeName, data in pairs(allCodes) do
+                local levelReq = data.LevelReq or 0
+                if playerLevel >= levelReq then
+                    WindUI:Notify({ Title="Code", Content="Redeeming: "..codeName, Duration=2, Icon="gift" })
+                    pcall(function() Remotes.UseCode:InvokeServer(codeName) end)
+                    task.wait(2)
+                end
+            end
+            WindUI:Notify({ Title="Done", Content="All codes attempted!", Duration=3, Icon="check" })
+        end)
+    end,
+})
+
+-- ============================================================
+--  ARTIFACT TAB
+-- ============================================================
+local ArtifactSection = Tabs.Artifact:Section({ Title="Artifact Automation", Box=true, Opened=true })
+local allSets, allStats2 = {}, {}
+if Modules.ArtifactConfig then
+    for setName,_ in pairs(Modules.ArtifactConfig.Sets or {}) do table.insert(allSets, setName) end
+    for statKey,_ in pairs(Modules.ArtifactConfig.Stats or {}) do table.insert(allStats2, statKey) end
+end
+
+ArtifactSection:Slider({
+    Title="Upgrade Limit", Step=1, Value={Min=0, Max=15, Default=0},
+    Callback=function(v) _G.ArtifactUpgradeLimit = v end,
+})
+
+ArtifactSection:Toggle({
+    Title="Auto Upgrade Artifacts", Icon="hammer",
+    Type="Checkbox", Value=false,
+    Callback=function(state) _G.ArtifactAutoUpgrade = state end,
+})
+
+ArtifactSection:Toggle({
+    Title="Auto Lock Artifacts", Icon="lock",
+    Type="Checkbox", Value=false,
+    Callback=function(state) _G.ArtifactAutoLock = state end,
+})
+
+ArtifactSection:Toggle({
+    Title="Auto Delete Unlocked", Icon="trash",
+    Type="Checkbox", Value=false,
+    Callback=function(state) _G.ArtifactDeleteUnlocked = state end,
+})
+
+ArtifactSection:Toggle({
+    Title="Auto Equip Best Artifacts", Icon="check-circle",
+    Type="Checkbox", Value=false,
+    Callback=function(state) _G.ArtifactAutoEquip = state end,
+})
+
+ArtifactSection:Slider({
+    Title="Min Sub-Stats to Lock", Step=1, Value={Min=0, Max=4, Default=2},
+    Callback=function(v) _G.ArtifactMinSS = v end,
+})
+
+-- Artifact automation loop
+task.spawn(function()
+    while task.wait(5) do
+        if not (_G.ArtifactAutoUpgrade or _G.ArtifactAutoLock or _G.ArtifactDeleteUnlocked or _G.ArtifactAutoEquip) then continue end
+        if not Shared.ArtifactSession.Inventory or not next(Shared.ArtifactSession.Inventory) then
+            if Remotes.ArtifactUnequip then pcall(function() Remotes.ArtifactUnequip:FireServer("") end) end
+            continue
+        end
+        local lockQueue, deleteQueue, upgradeQueue = {}, {}, {}
+        for uuid, data in pairs(Shared.ArtifactSession.Inventory) do
+            if _G.ArtifactAutoUpgrade and data.Level < (_G.ArtifactUpgradeLimit or 0) then
+                table.insert(upgradeQueue, {UUID=uuid, Levels=_G.ArtifactUpgradeLimit})
+            end
+            if not data.Locked then
+                if _G.ArtifactAutoLock then
+                    local ssCount = #(data.Substats or {})
+                    if ssCount >= (_G.ArtifactMinSS or 2) then
+                        table.insert(lockQueue, uuid)
                     end
                 end
-gethui().Orion.Name = "OrionEdited"
+                if _G.ArtifactDeleteUnlocked then
+                    table.insert(deleteQueue, uuid)
+                end
+            end
+        end
+        for _, uuid in ipairs(lockQueue) do
+            pcall(function() Remotes.ArtifactLock:FireServer(uuid, true) end); task.wait(0.1)
+        end
+        if #deleteQueue > 0 then
+            for i = 1, #deleteQueue, 50 do
+                local chunk = {}
+                for j = i, math.min(i+49, #deleteQueue) do table.insert(chunk, deleteQueue[j]) end
+                pcall(function() Remotes.MassDelete:FireServer(chunk) end); task.wait(0.6)
+            end
+        end
+        if #upgradeQueue > 0 then
+            for i = 1, #upgradeQueue, 50 do
+                local chunk = {}
+                for j = i, math.min(i+49, #upgradeQueue) do table.insert(chunk, upgradeQueue[j]) end
+                pcall(function() Remotes.MassUpgrade:FireServer(chunk) end); task.wait(0.6)
+            end
+        end
+        if _G.ArtifactAutoEquip then
+            local bestItems = {Helmet=nil,Gloves=nil,Body=nil,Boots=nil}
+            local bestScores = {Helmet=-1,Gloves=-1,Body=-1,Boots=-1}
+            for uuid, data in pairs(Shared.ArtifactSession.Inventory) do
+                local score = (#(data.Substats or {}) * 10) + (data.Level or 0)
+                if bestScores[data.Category] and score > bestScores[data.Category] then
+                    bestScores[data.Category] = score
+                    bestItems[data.Category] = {UUID=uuid, Equipped=data.Equipped}
+                end
+            end
+            for _, item in pairs(bestItems) do
+                if item and not item.Equipped then
+                    pcall(function() Remotes.ArtifactEquip:FireServer(item.UUID) end)
+                    task.wait(0.2)
+                end
+            end
+        end
+    end
+end)
+
+-- ============================================================
+--  WORLD TAB
+-- ============================================================
+local TeleportSection = Tabs.World:Section({ Title="Teleport System", Box=true, Opened=true })
+
+local LocationValues = {}
+for _, loc in ipairs(TeleportLocations) do table.insert(LocationValues, loc.Display) end
+
+TeleportSection:Dropdown({
+    Title="Select Destination", Desc="Choose where to teleport",
+    Values=LocationValues, Value=LocationValues[1], Multi=false,
+    Callback=function(selected)
+        for _, loc in ipairs(TeleportLocations) do
+            if loc.Display == selected then _G.SelectedTeleportLocation = loc; break end
+        end
+    end,
+})
+
+TeleportSection:Button({
+    Title="Teleport to Selected Location", Desc="",
+    Callback=function()
+        local loc = _G.SelectedTeleportLocation
+        if not loc then
+            WindUI:Notify({ Title="Error", Content="No location selected!", Duration=2, Icon="alert-triangle" })
+            return
+        end
+        replicated.Remotes.TeleportToPortal:FireServer(loc.Portal)
+        WindUI:Notify({ Title="Teleporting", Content="Going to "..loc.Name.."...", Duration=2, Icon="map-pin" })
+    end,
+})
+
+TeleportSection:Divider()
+
+-- NPC Teleport
+local NPCTeleportSection = Tabs.World:Section({ Title="NPC Teleport", Box=true, Opened=false })
+
+local allNPCNames = {}
+for _, v in pairs(PATH.InteractNPCs:GetChildren()) do table.insert(allNPCNames, v.Name) end
+table.sort(allNPCNames)
+
+NPCTeleportSection:Dropdown({
+    Title="Select NPC", Values=allNPCNames, Value=nil, Multi=false, AllowNull=true,
+    Callback=function(s)
+        if s then SafeTeleportToNPC(s) end
+    end,
+})
+
+-- Shop Section
+local ShopSection = Tabs.World:Section({ Title="Shop", Box=true, Opened=false })
+
+ShopSection:Button({
+    Title="Buy Katana Sword", Desc="Purchase Katana from shop",
+    Callback=function()
+        pcall(function() replicated.Remotes.ShopRemotes.PurchaseProduct:FireServer("clearGift") end)
+        WindUI:Notify({ Title="Purchased", Content="Katana bought!", Duration=2, Icon="shopping-cart" })
+    end,
+})
+
+-- World Auto Farm
+local WorldFarmSection = Tabs.World:Section({ Title="World Auto Farm", Box=true, Opened=false })
+
+WorldFarmSection:Toggle({
+    Title="Auto Farm Nearby Mobs", Desc="Attacks mobs within range", Icon="swords",
+    Type="Checkbox", Value=false,
+    Callback=function(state)
+        _G.SailorAutoFarm = state
+        if state then
+            task.spawn(function()
+                while _G.SailorAutoFarm do
+                    local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+                    if root then
+                        for _, mob in ipairs(workspace:GetDescendants()) do
+                            if mob:IsA("Model") and (mob.Name:lower():find("mob") or mob.Name:lower():find("enemy") or mob.Name:lower():find("bandit")) then
+                                local mobRoot = mob:FindFirstChild("HumanoidRootPart") or mob:FindFirstChild("Head")
+                                if mobRoot and (mobRoot.Position - root.Position).Magnitude < 20 then
+                                    root.CFrame = mobRoot.CFrame
+                                    task.wait(0.05)
+                                    pcall(function() replicated.CombatSystem.Remotes.RequestHit:FireServer() end)
+                                    task.wait(0.2)
+                                end
+                            end
+                        end
+                    end
+                    task.wait(0.1)
+                end
+            end)
+        end
+    end,
+})
+
+-- ============================================================
+--  VISUALS TAB
+-- ============================================================
+local ESPSection = Tabs.Visuals:Section({ Title="ESP & Visuals", Box=true, Opened=true })
+
+ESPSection:Toggle({
+    Title="Player ESP", Desc="Highlight other players", Icon="users",
+    Type="Checkbox", Value=false,
+    Callback=function(state) _G.SailorESP = state end,
+})
+
+ESPSection:Toggle({
+    Title="Fullbright", Desc="Remove shadows", Icon="sun",
+    Type="Checkbox", Value=false,
+    Callback=function(state)
+        local lighting = game:GetService("Lighting")
+        if state then
+            lighting.Ambient = Color3.fromRGB(255,255,255)
+            lighting.Brightness = 2
+            lighting.GlobalShadows = false
+            lighting.ClockTime = 12
+        else
+            lighting.Ambient = Color3.fromRGB(0,0,0)
+            lighting.Brightness = 1
+            lighting.GlobalShadows = true
+        end
+    end,
+})
+
+ESPSection:Toggle({
+    Title="No Fog", Desc="Remove fog", Icon="wind",
+    Type="Checkbox", Value=false,
+    Callback=function(state)
+        _G.NoFog = state
+        if state then Lighting.FogEnd = 9e9 end
+    end,
+})
+
+ESPSection:Slider({
+    Title="Time of Day", Step=0.5, Value={Min=0, Max=24, Default=12},
+    Callback=function(v) _G.TimeOfDay = v; Lighting.ClockTime = v end,
+})
+
+-- Mob/Boss ESP
+ESPSection:Toggle({
+    Title="Mob ESP", Desc="Highlight mobs", Icon="target",
+    Type="Checkbox", Value=false,
+    Callback=function(state)
+        _G.MobESP = state
+        task.spawn(function()
+            while _G.MobESP do
+                task.wait(0.5)
+                for _, npc in pairs(PATH.Mobs:GetChildren()) do
+                    if npc:IsA("Model") and not npc:FindFirstChild("MobESP") then
+                        local hl            = Instance.new("Highlight")
+                        hl.Name             = "MobESP"
+                        hl.FillColor        = Color3.fromRGB(50,200,50)
+                        hl.FillTransparency = 0.6
+                        hl.OutlineColor     = Color3.fromRGB(0,255,0)
+                        hl.DepthMode        = Enum.HighlightDepthMode.AlwaysOnTop
+                        hl.Adornee          = npc
+                        hl.Parent           = npc
+                    end
+                end
+            end
+            for _, npc in pairs(PATH.Mobs:GetChildren()) do
+                local hl = npc:FindFirstChild("MobESP")
+                if hl then hl:Destroy() end
+            end
+        end)
+    end,
+})
+
+-- ============================================================
+--  SETTINGS TAB
+-- ============================================================
+local ServerSection = Tabs.Settings:Section({ Title="Server Features", Box=true, Opened=true })
+
+ServerSection:Button({
+    Title="Server Hop", Desc="Joins a different server instantly",
+    Callback=function()
+        WindUI:Notify({ Title="Server Hop", Content="Joining a Different Server..", Duration=2, Icon="server" })
+        task.wait(1)
+        ServerHop()
+    end,
+})
+
+ServerSection:Button({
+    Title="Copy Job ID", Desc="",
+    Callback=function()
+        if Support.Clipboard then setclipboard(game.JobId) end
+        WindUI:Notify({ Title="Job ID", Content="Copied to clipboard", Duration=2, Icon="server" })
+    end,
+})
+
+ServerSection:Input({
+    Title="Enter Job ID", Desc="Paste server Job ID to join",
+    Value="", Placeholder="Paste Job ID here...", Type="Input",
+    Callback=function(input) _G.TargetJobId = input end,
+})
+
+ServerSection:Button({
+    Title="Join Server", Desc="Teleports to entered Job ID",
+    Callback=function()
+        if _G.TargetJobId and _G.TargetJobId ~= "" then
+            pcall(function() TeleportService:TeleportToPlaceInstance(PlaceId, _G.TargetJobId, player) end)
+        else
+            WindUI:Notify({ Title="Error", Content="Enter a Job ID first!", Duration=2, Icon="alert-triangle" })
+        end
+    end,
+})
+
+ServerSection:Divider()
+
+ServerSection:Toggle({
+    Title="Auto Rejoin on Disconnect", Desc="Auto reconnect when disconnected", Icon="refresh-cw",
+    Type="Checkbox", Value=false,
+    Callback=function(state)
+        _G.AutoReconnect = state
+        if state then
+            GuiService.ErrorMessageChanged:Connect(function()
+                if not _G.AutoReconnect then return end
+                task.delay(3, function()
+                    pcall(function() TeleportService:Teleport(game.PlaceId, player) end)
+                end)
+            end)
+        end
+    end,
+})
+
+-- Performance Section
+local PerfSection = Tabs.Settings:Section({ Title="Performance", Box=true, Opened=true })
+
+PerfSection:Button({
+    Title="Boost FPS", Desc="Lowers graphics and clears textures",
+    Callback=function()
+        ApplyFPSBoost()
+        WindUI:Notify({ Title="FPS Boost", Content="Graphics optimised!", Duration=2, Icon="zap" })
+    end,
+})
+
+if Support.FPS then
+    PerfSection:Slider({
+        Title="Max FPS Cap", Step=5, Value={Min=5, Max=360, Default=60},
+        Callback=function(v) pcall(function() setfpscap(v) end) end,
+    })
+end
+
+PerfSection:Toggle({
+    Title="Disable 3D Rendering", Desc="Extreme FPS boost", Icon="eye-off",
+    Type="Checkbox", Value=false,
+    Callback=function(state) pcall(function() RunService:Set3dRenderingEnabled(not state) end) end,
+})
+
+-- Safety Section
+local SafetySection = Tabs.Settings:Section({ Title="Safety", Box=true, Opened=false })
+
+SafetySection:Toggle({
+    Title="Anti Kick (Client)", Desc="Prevent client-side kicks", Icon="shield",
+    Type="Checkbox", Value=false,
+    Callback=function(state)
+        _G.AntiKick = state
+        if state then
+            pcall(function()
+                local mt = getrawmetatable and getrawmetatable(game)
+                if mt then
+                    local old = mt.__namecall
+                    setreadonly(mt, false)
+                    mt.__namecall = newcclosure(function(self, ...)
+                        local method = getnamecallmethod()
+                        if method == "Kick" then return end
+                        return old(self, ...)
+                    end)
+                    setreadonly(mt, true)
+                end
+            end)
+        end
+    end,
+})
+
+-- Webhook Section
+local WebhookSection = Tabs.Settings:Section({ Title="Webhook", Box=true, Opened=false })
+
+WebhookSection:Input({
+    Title="Discord Webhook URL", Desc="Your webhook URL",
+    Value="", Placeholder="https://discord.com/api/webhooks/...", Type="Input",
+    Callback=function(input) _G.WebhookURL = input end,
+})
+
+WebhookSection:Dropdown({
+    Title="Select Rarities to Track",
+    Values={"Common","Uncommon","Rare","Epic","Legendary","Mythical","Secret"},
+    Value=nil, Multi=true,
+    Callback=function(s) _G.WebhookRarities = s end,
+})
+
+WebhookSection:Slider({
+    Title="Send Every (minutes)", Step=1, Value={Min=1, Max=60, Default=5},
+    Callback=function(v) _G.WebhookDelay = v end,
+})
+
+WebhookSection:Toggle({
+    Title="Auto Send Webhook", Desc="Sends stats periodically", Icon="send",
+    Type="Checkbox", Value=false,
+    Callback=function(state)
+        _G.AutoWebhook = state
+        if state then
+            task.spawn(function()
+                while _G.AutoWebhook do
+                    if _G.WebhookURL and _G.WebhookURL:find("discord.com/api/webhooks/") then
+                        local data = player.Data
+                        local desc = "**Sailor Piece**\n"
+                        if data then
+                            desc = desc..string.format("**Level:** %s\n", CommaFormat(data.Level.Value))
+                            desc = desc..string.format("**Money:** %s\n", Abbreviate(data.Money.Value))
+                            desc = desc..string.format("**Gems:** %s\n", CommaFormat(data.Gems.Value))
+                        end
+                        local payload = {
+                            embeds = {{ description=desc, color=tonumber("FF0F7B",16) }}
+                        }
+                        pcall(function()
+                            if request then
+                                request({ Url=_G.WebhookURL, Method="POST",
+                                    Headers={["Content-Type"]="application/json"},
+                                    Body=HttpService:JSONEncode(payload) })
+                            end
+                        end)
+                    end
+                    task.wait((_G.WebhookDelay or 5) * 60)
+                end
+            end)
+        end
+    end,
+})
+
+-- Window tag
+Window:Tag({
+    Title  = "v2.0",
+    Icon   = "github",
+    Color  = Color3.fromHex("#30ff6a"),
+    Radius = 8,
+})
+
+-- ============================================================
+--  STARTUP NOTIFICATION
+-- ============================================================
+task.spawn(function()
+    task.wait(1)
+    if Remotes.ReqInventory then
+        pcall(function() Remotes.ReqInventory:FireServer() end)
+    end
+    UpdateNPCLists()
+end)
+
+WindUI:Notify({
+    Title   = "Sailor Piece Loaded",
+    Content = "CattStar Sailor-Piece v2.0 | RightShift to toggle UI",
+    Duration= 4,
+    Icon    = "rbxassetid://84971028134779",
+})
